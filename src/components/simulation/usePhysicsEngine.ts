@@ -1,17 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import {
-  GRAVITY_MULTIPLIER,
-  ANTI_MONOPOLY_REPULSION,
-  SPIN_WAVE_SPEED,
-  SPIN_INERTIA,
-  SPATIAL_FRICTION,
-  INTERACTION_RADIUS,
-  OUTER_HALO_RADIUS,
-  ANCHOR_SPRING,
-  FREE_SPRING,
-} from "@/lib/physicsConstants";
+import { OUTER_HALO_RADIUS, INTERACTION_RADIUS } from "@/lib/physicsConstants";
+import { applyForcesAndKinematics } from "@/lib/physics/forces";
+import type { PeerMapEntry } from "@/lib/types";
 
 export type AgentType = "listener" | "node";
 
@@ -44,12 +36,16 @@ export function usePhysicsEngine(
   dataTransferRate: number,
   spatialDataRef: React.MutableRefObject<SpatialData>,
   connectedNodeId: string | null,
+  isReady: boolean = true,
+  activeProfile: string = "VOICE",
 ) {
   const stateRef = useRef({
     isActive,
     isListener,
     dataTransferRate,
     connectedNodeId,
+    isReady,
+    activeProfile,
   });
   const elementsRef = useRef({
     agents: [] as Agent[],
@@ -57,17 +53,22 @@ export function usePhysicsEngine(
     mouse: {
       x: 0,
       y: 0,
+      worldX: 0,
+      worldY: 0,
       isAnchored: false,
       anchorX: 0,
       anchorY: 0,
       isInteracting: false,
     },
+    lastSocketId: null as string | null,
+    lastPeerMap: [] as PeerMapEntry[],
   });
   const interactionTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Internal timing state
   const timeRef = useRef(0);
   const transitionScalarRef = useRef(0);
+  const zoomScalarRef = useRef(0.1);
   // Track connection transitions to set/clear anchor
   const prevIsActiveRef = useRef(isActive);
 
@@ -80,6 +81,8 @@ export function usePhysicsEngine(
       isListener,
       dataTransferRate,
       connectedNodeId,
+      isReady,
+      activeProfile,
     };
 
     // Connect transition: anchor the user's node to the outer halo edge (one-time pull)
@@ -115,7 +118,7 @@ export function usePhysicsEngine(
     }
 
     prevIsActiveRef.current = isActive;
-  }, [isActive, isListener, dataTransferRate, connectedNodeId]);
+  }, [isActive, isListener, dataTransferRate, connectedNodeId, isReady]);
 
   const handleMouseMove = (x: number, y: number) => {
     elementsRef.current.mouse.x = x;
@@ -141,11 +144,15 @@ export function usePhysicsEngine(
 
     // Empty space click: toggle positional anchor
     mouse.isAnchored = !mouse.isAnchored;
-    mouse.anchorX = mouse.x;
-    mouse.anchorY = mouse.y;
+    mouse.anchorX = mouse.worldX;
+    mouse.anchorY = mouse.worldY;
   };
 
-  const updatePeers = (peerMap: any[], socketId?: string | null) => {
+  const updatePeers = (peerMap: PeerMapEntry[], socketId?: string | null) => {
+    // Save these for tick() access
+    elementsRef.current.lastSocketId = socketId || null;
+    elementsRef.current.lastPeerMap = peerMap;
+
     // Sync the internal simulation with the global tracker
     // Remove entities that are no longer in the map (or are us)
     const myIds = new Set([elementsRef.current.selfId]);
@@ -171,6 +178,11 @@ export function usePhysicsEngine(
         existing.x += (peer.latentState.x - existing.x) * 0.1;
         existing.y += (peer.latentState.y - existing.y) * 0.1;
         existing.spin += (peer.latentState.spin - existing.spin) * 0.1;
+
+        // Sync Energy from Tracker
+        if (peer.energy !== undefined) {
+          existing.energy += (peer.energy - existing.energy) * 0.1;
+        }
       } else {
         // Determine if it's the root node or a listener relay
         const isRoot = peer.role === "root";
@@ -184,7 +196,7 @@ export function usePhysicsEngine(
           spin: peer.latentState.spin,
           spinVelocity: 0,
           mass: isRoot ? 100 : 1,
-          energy: isRoot ? 100 : 0,
+          energy: peer.energy !== undefined ? peer.energy : (isRoot ? 100 : 0),
           pulsePhase: Math.random() * Math.PI,
         });
       }
@@ -239,9 +251,18 @@ export function usePhysicsEngine(
         spin: 0.5,
         spinVelocity: 0,
         mass: 100,
-        energy: 100, // E_base
+        energy: 100, // E_0 start
         pulsePhase: 0,
       });
+    } else if (
+      currentIsActive && existingNodeIndex !== -1 && !currentIsListener
+    ) {
+      // Sync broadcaster's own energy from tracker if available
+      const existingNode = els.agents[existingNodeIndex];
+      const trackerData = els.lastPeerMap.find((p: PeerMapEntry) => p.id === els.lastSocketId);
+      if (trackerData && trackerData.energy !== undefined) {
+        existingNode.energy += (trackerData.energy - existingNode.energy) * 0.1;
+      }
     } else if (
       !currentIsActive &&
       existingNodeIndex !== -1 &&
@@ -261,164 +282,45 @@ export function usePhysicsEngine(
 
     const transitionScalar = transitionScalarRef.current;
 
+    // Zoom interpolation
+    if (state.isReady && zoomScalarRef.current < 1) {
+      zoomScalarRef.current += 0.01;
+      if (zoomScalarRef.current > 1) zoomScalarRef.current = 1;
+    } else if (!state.isReady && zoomScalarRef.current > 0.1) {
+      zoomScalarRef.current -= 0.02; // Zooms out faster
+      if (zoomScalarRef.current < 0.1) zoomScalarRef.current = 0.1;
+    }
+    const zoomScalar = zoomScalarRef.current;
+
+    // Convert screen mouse to world coordinates
+    els.mouse.worldX = (els.mouse.x - width / 2) / zoomScalar + width / 2;
+    els.mouse.worldY = (els.mouse.y - height / 2) / zoomScalar + height / 2;
+
     // Clear frame with trail effect
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
     ctx.fillRect(0, 0, width, height);
 
-    // Populate ambient particles (Noise/Exploration) (Disabled for debugging real peers)
-    /*
-        if (els.agents.length < 50 && Math.random() < 0.2) {
-            els.agents.push({
-                id: `ambient-${Math.random()}`,
-                type: "listener",
-                x: Math.random() * width,
-                y: Math.random() * height,
-                vx: (Math.random() - 0.5) * 2,
-                vy: (Math.random() - 0.5) * 2,
-                spin: Math.random(),
-                spinVelocity: 0,
-                mass: 0.5,
-                energy: 0,
-                pulsePhase: Math.random() * Math.PI,
-                life: 0
-            });
-        }
-        */
-
-    // Physics constants
-    const G = GRAVITY_MULTIPLIER;
-    const C_repulse = ANTI_MONOPOLY_REPULSION;
-    const C_spin_wave = SPIN_WAVE_SPEED;
-    const Spin_inertia = SPIN_INERTIA;
-    const Friction = SPATIAL_FRICTION;
-    const InteractionRadius = INTERACTION_RADIUS;
-
-    // Apply Forces
-    for (let i = 0; i < els.agents.length; i++) {
-      const agent = els.agents[i];
-      if (agent.type === "node") continue; // Nodes are stationary sources in MVP
-
-      let F_x = 0;
-      let F_y = 0;
-      let spinLaplacian = 0; // Neighbors' average spin state diff
-      let neighborCount = 0;
-
-      // F_user: Overriding Force
-      // Free state: gentle spring toward mouse position (node follows cursor)
-      // Anchored state: stronger spring toward anchor point (set by empty-space click or broadcast connection)
-      const isSelf = agent.id === els.selfId;
-      const mouse = els.mouse;
-      if (isSelf && mouse.isInteracting && currentIsListener) {
-        const targetX = mouse.isAnchored ? mouse.anchorX : mouse.x;
-        const targetY = mouse.isAnchored ? mouse.anchorY : mouse.y;
-        const dx = targetX - agent.x;
-        const dy = targetY - agent.y;
-        const spring = mouse.isAnchored ? ANCHOR_SPRING : FREE_SPRING;
-        F_x += dx * spring;
-        F_y += dy * spring;
-      }
-
-      // Interactions with other agents
-      for (let j = 0; j < els.agents.length; j++) {
-        if (i === j) continue;
-        const other = els.agents[j];
-        const dx = other.x - agent.x;
-        const dy = other.y - agent.y;
-        const distSq = dx * dx + dy * dy;
-        const dist = Math.sqrt(distSq);
-
-        if (dist < 1) continue; // Prevent divisions by zero
-
-        if (other.type === "node") {
-          // Attraction (F_attract) - Gravity towards active broadcast
-          // Self-agent only feels gravity when explicitly tuned in (isActive).
-          // This prevents the user from drifting toward a node after disconnecting.
-          const applyGravity = !isSelf || currentIsActive;
-          const force = applyGravity
-            ? (G * other.energy * agent.mass) / distSq
-            : 0;
-          F_x += (dx / dist) * force;
-          F_y += (dy / dist) * force; // Added missing F_y for gravity
-
-          // Repulsion (Anti-Monopoly Core)
-          if (dist < 50) {
-            const repulseF = C_repulse / distSq;
-            F_x -= (dx / dist) * repulseF;
-            F_y -= (dy / dist) * repulseF;
-          }
-        } else if (other.type === "listener" && dist < InteractionRadius) {
-          // Spin-Wave Alignment (Information Exchange)
-          spinLaplacian += other.spin - agent.spin;
-          neighborCount++;
-
-          // Soft Repulsion (Density spread among peers)
-          if (dist < 20) {
-            const repulseF = 10 / distSq;
-            F_x -= (dx / dist) * repulseF;
-            F_y -= (dy / dist) * repulseF;
-          }
-        }
-      }
-
-      // Noise (F_noise) - Barely noticeable for very subtle organic shifting
-      if (agent.type === "listener") {
-        F_x += (Math.random() - 0.5) * 0.05;
-        F_y += (Math.random() - 0.5) * 0.05;
-      }
-
-      // Spin-Wave Kinematics (Attanasi et al.)
-      if (neighborCount > 0) {
-        const avgLaplacian = spinLaplacian / neighborCount;
-        agent.spinVelocity += avgLaplacian * C_spin_wave;
-      }
-      agent.spinVelocity *= Spin_inertia;
-      agent.spin += agent.spinVelocity;
-
-      // Keep spin wrapped between [0, 1] mapped to [0, 360] hues
-      if (agent.spin > 1) agent.spin -= 1;
-      if (agent.spin < 0) agent.spin += 1;
-
-      // Apply Net Force (F_total) to position
-      if (!isSelf || (!mouse.isInteracting && currentIsListener)) {
-        // If the user is idle, emergent forces take over their avatar
-        agent.vx += F_x / agent.mass;
-        agent.vy += F_y / agent.mass;
-      } else if (isSelf && mouse.isInteracting) {
-        // User is forcing movement, add slight jitter scaled by transfer rate
-        agent.vx +=
-          F_x + (Math.random() - 0.5) * (state.dataTransferRate * 0.5);
-        agent.vy +=
-          F_y + (Math.random() - 0.5) * (state.dataTransferRate * 0.5);
-      }
-
-      agent.vx *= Friction;
-      agent.vy *= Friction;
-
-      agent.x += agent.vx;
-      agent.y += agent.vy;
-
-      // Age ambient particles
-      if (agent.life !== undefined) {
-        agent.life += 0.01;
-        // De-spawn logic
-        if (
-          agent.life > 10 ||
-          agent.x < 0 ||
-          agent.x > width ||
-          agent.y < 0 ||
-          agent.y > height
-        ) {
-          els.agents.splice(i, 1);
-          i--;
-        }
-      }
-    }
+    applyForcesAndKinematics(
+      els.agents,
+      els.selfId,
+      els.mouse,
+      currentIsActive,
+      currentIsListener,
+      state.dataTransferRate,
+      width,
+      height
+    );
 
     // --- RENDERING PHASE ---
 
+    ctx.save();
+    ctx.translate(width / 2, height / 2);
+    ctx.scale(zoomScalar, zoomScalar);
+    ctx.translate(-width / 2, -height / 2);
+
     let frameHoveredNodeId: string | null = null;
-    const mouseX = els.mouse.x;
-    const mouseY = els.mouse.y;
+    const mouseX = els.mouse.worldX;
+    const mouseY = els.mouse.worldY;
 
     // Render Edges (Network connections & Spin-Wave visibility)
     ctx.lineWidth = 0.5;
@@ -429,11 +331,13 @@ export function usePhysicsEngine(
       if (a.type === "node") {
         const nodePulseScalar =
           a.id === "root-broadcast" && !currentIsListener
-            ? transitionScalar
-            : 1.0;
+            ? transitionScalar * (a.energy / 100) // Extinguish if energy is low
+            : 1.0 * Math.max(0.1, a.energy / 100);
 
-        a.pulsePhase += 0.05 * state.dataTransferRate;
-        const pulse = (Math.sin(a.pulsePhase) * 2 + 6) * nodePulseScalar;
+        // Amplify the pulse visibly during high fidelity audio transfer
+        const fidelityMultiplier = state.activeProfile === "HIGH_FIDELITY" ? 2.5 : 1.0;
+        a.pulsePhase += (0.05 * state.dataTransferRate) * fidelityMultiplier;
+        const pulse = ((Math.sin(a.pulsePhase) * 2 + 6) * nodePulseScalar) * (state.activeProfile === "HIGH_FIDELITY" ? 1.5 : 1.0);
         const outerRadius = (OUTER_HALO_RADIUS + pulse * 1.5) * nodePulseScalar;
 
         // Hover detection
@@ -480,14 +384,14 @@ export function usePhysicsEngine(
         const b = els.agents[j];
         const dist = Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
 
-        if (dist < InteractionRadius) {
+        if (dist < INTERACTION_RADIUS) {
           const isNodeLink = a.type === "node" || b.type === "node";
           const isSelfLink = a.id === els.selfId || b.id === els.selfId;
 
           if (isNodeLink) {
-            ctx.strokeStyle = `rgba(150, 150, 150, ${((InteractionRadius - dist) / InteractionRadius) * 0.3})`;
+            ctx.strokeStyle = `rgba(150, 150, 150, ${((INTERACTION_RADIUS - dist) / INTERACTION_RADIUS) * 0.3})`;
           } else if (isSelfLink) {
-            ctx.strokeStyle = `rgba(255, 255, 255, ${((InteractionRadius - dist) / InteractionRadius) * 0.2})`;
+            ctx.strokeStyle = `rgba(255, 255, 255, ${((INTERACTION_RADIUS - dist) / INTERACTION_RADIUS) * 0.2})`;
           } else {
             // Ambient particle connections based on spin alignment
             const spinDiff = Math.abs(a.spin - b.spin);
@@ -558,6 +462,8 @@ export function usePhysicsEngine(
         }
       }
     }
+
+    ctx.restore();
 
     // Emit Spatial Data to React Ref for Audio Integration
     if (selfAgent) {

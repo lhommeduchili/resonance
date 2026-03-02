@@ -1,16 +1,19 @@
 "use client";
+import { logger } from "@/lib/logger";
 
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
-import type { LatentState, ListenerStatus, PeerMapEntry } from "@/lib/types";
+import type { LatentState, ListenerStatus, PeerMapEntry, InboundSignal } from "@/lib/types";
 import { ICE_SERVERS } from "@/lib/types";
+import { useNetworkTelemetry } from "./useNetworkTelemetry";
+import { eventBus } from "@/lib/eventBus";
+import { emitCandidate, emitDescription, applyRemoteSignal } from "@/lib/p2p/signalTransport";
 
 export function useListener() {
   const [status, setStatus] = useState<ListenerStatus>("AMBIENT");
   const [activePeers, setActivePeers] = useState<number>(0);
   const [globalPeerMap, setGlobalPeerMap] = useState<PeerMapEntry[]>([]);
   const [socketId, setSocketId] = useState<string | null>(null);
-  const [dataTransferRate, setDataTransferRate] = useState<number>(1.0);
   const [audioStream, setAudioStream] = useState<MediaStream | null>(null);
   const [upstreamTargetId, setUpstreamTargetId] = useState<string | null>(null);
   const socketRef = useRef<Socket | null>(null);
@@ -21,26 +24,55 @@ export function useListener() {
   const pendingUpstreamPcRef = useRef<RTCPeerConnection | null>(null);
   const downstreamPcsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const reconnectAttemptsRef = useRef<number>(0);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (status === "LISTENING") {
-      interval = setInterval(() => {
-        const jitter = Math.random() * 1.5 * Math.max(1, activePeers);
-        setDataTransferRate(1.0 + jitter);
-        setTimeout(() => {
-          setDataTransferRate(1.0 + Math.random() * 0.2);
-        }, 50);
-      }, 300);
-    } else {
-      setDataTransferRate(1.0);
-    }
-    return () => clearInterval(interval);
-  }, [status, activePeers]);
+  const { dataTransferRate } = useNetworkTelemetry(upstreamPcRef, status);
 
   useEffect(() => {
     statusRef.current = status;
   }, [status]);
+
+  function stopListening() {
+    // Tell server we left to close the PoC session
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("leave_broadcast");
+    }
+    // Do NOT null the audio stream or srcObject here.
+    // We keep the audio pipeline alive so ambient audio resumes seamlessly
+    // once the new upstream peer connection fires ontrack.
+
+    if (upstreamPcRef.current) {
+      upstreamPcRef.current.close();
+      upstreamPcRef.current = null;
+    }
+    if (pendingUpstreamPcRef.current) {
+      pendingUpstreamPcRef.current.close();
+      pendingUpstreamPcRef.current = null;
+    }
+
+    upstreamTargetIdRef.current = null;
+    setUpstreamTargetId(null);
+
+    downstreamPcsRef.current.forEach((pc) => pc.close());
+    downstreamPcsRef.current.clear();
+
+    setStatus("AMBIENT");
+    statusRef.current = "AMBIENT"; // Force immediate sync for async closures so onTrack doesn't upgrade
+
+    if (socketRef.current?.id) {
+      eventBus.emit('listener_left', { nodeId: socketRef.current.id });
+    }
+
+    // Reconnect to the mesh as an ambient observer
+    if (socketRef.current && socketRef.current.connected) {
+      const latentPayload = lastReportedLatentRef.current || {
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        spin: Math.random(),
+      };
+      requestUpstreamPeer(socketRef.current, latentPayload);
+    }
+  }
 
   useEffect(() => {
     const audio = new Audio();
@@ -48,6 +80,7 @@ export function useListener() {
     audio.muted = true; // MUST be muted so the browser doesn't play raw audio bypassing WebAudio API
     audioElementRef.current = audio;
     return () => stopListening();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const createUpstreamConnection = (
@@ -55,23 +88,20 @@ export function useListener() {
     socket: Socket,
   ): RTCPeerConnection => {
     const pc = new RTCPeerConnection({
-      iceServers: ICE_SERVERS,
+      iceServers: ICE_SERVERS as unknown as RTCIceServer[],
     });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit("signal", {
-          target: targetId,
-          signal: { type: "candidate", candidate: event.candidate },
-        });
+        emitCandidate(socket, targetId, event.candidate);
       }
     };
 
     pc.ontrack = (event) => {
-      console.log("[PC] Upstream track received from:", targetId);
+      logger.info("P2P-Listener", "[PC] Upstream track received from:", targetId);
 
       if (pendingUpstreamPcRef.current === pc && upstreamPcRef.current) {
-        console.log("[PC] Hot-swap complete. Closing old connection.");
+        logger.info("P2P-Listener", "[PC] Hot-swap complete. Closing old connection.");
         upstreamPcRef.current.close();
         upstreamPcRef.current = pc;
         pendingUpstreamPcRef.current = null;
@@ -79,8 +109,27 @@ export function useListener() {
         upstreamPcRef.current = pc;
       }
 
+      // Reset backoff counter on successful connection
+      reconnectAttemptsRef.current = 0;
+
       upstreamTargetIdRef.current = targetId;
       setUpstreamTargetId(targetId);
+
+      // Relay Logic: Forward this new track to all existing downstream children
+      if (event.streams[0]) {
+        const stream = event.streams[0];
+        downstreamPcsRef.current.forEach((childPc) => {
+          const senders = childPc.getSenders();
+          stream.getTracks().forEach((track) => {
+            const existingSender = senders.find(s => s.track?.kind === track.kind);
+            if (existingSender) {
+              existingSender.replaceTrack(track).catch(e => console.warn("Failed to replace relay track", e));
+            } else {
+              childPc.addTrack(track, stream);
+            }
+          });
+        });
+      }
 
       if (audioElementRef.current && event.streams[0]) {
         // Always update the stream source — ambient reconnections need this
@@ -90,6 +139,9 @@ export function useListener() {
         // otherwise, stay AMBIENT and let spatial audio map the drone
         if (statusRef.current === "CONNECTING") {
           setStatus("LISTENING");
+          if (socketRef.current?.id) {
+            eventBus.emit('listener_joined', { nodeId: socketRef.current.id, channelId: targetId });
+          }
         }
       }
     };
@@ -99,8 +151,12 @@ export function useListener() {
         pc.connectionState === "disconnected" ||
         pc.connectionState === "failed"
       ) {
-        console.log("[PC] Upstream disconnected. Requesting new parent...");
+        logger.info("P2P-Listener", "[PC] Upstream disconnected. Requesting new parent...");
         pc.close();
+
+        if (socketRef.current?.id) {
+          eventBus.emit('listener_left', { nodeId: socketRef.current.id });
+        }
 
         if (upstreamPcRef.current === pc) {
           upstreamPcRef.current = null;
@@ -116,9 +172,22 @@ export function useListener() {
             const currentLatent =
               statusRef.current === "LISTENING" ||
                 statusRef.current === "CONNECTING"
-                ? (audioElementRef as any).latentData || { x: 0, y: 0, spin: 0 }
+                ? (audioElementRef.current as HTMLAudioElement & { latentData?: { x: number; y: number; spin: number } })?.latentData || { x: 0, y: 0, spin: 0 }
                 : { x: 0, y: 0, spin: 0 };
-            requestUpstreamPeer(socket, currentLatent);
+
+            // Exponential Backoff with Jitter
+            const attempts = reconnectAttemptsRef.current;
+            const backoffMs = Math.min(10000, Math.pow(2, attempts) * 1000) + Math.random() * 500;
+            reconnectAttemptsRef.current += 1;
+
+            logger.info("P2P-Listener", `[Backoff] Reconnecting to mesh in ${Math.round(backoffMs)}ms... (Attempt ${attempts + 1})`);
+            setTimeout(() => {
+              // Ensure socket is still connected after timeout
+              if (socketRef.current && socketRef.current.connected) {
+                // eslint-disable-next-line react-hooks/immutability
+                requestUpstreamPeer(socketRef.current, currentLatent);
+              }
+            }, backoffMs);
           }
         } else if (pendingUpstreamPcRef.current === pc) {
           pendingUpstreamPcRef.current = null;
@@ -135,26 +204,25 @@ export function useListener() {
 
   const createDownstreamConnection = (
     targetId: string,
-    stream: MediaStream,
+    stream: MediaStream | null,
     socket: Socket,
   ): RTCPeerConnection => {
     const pc = new RTCPeerConnection({
-      iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+      iceServers: ICE_SERVERS,
     });
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        socket.emit("signal", {
-          target: targetId,
-          signal: { type: "candidate", candidate: event.candidate },
-        });
+        emitCandidate(socket, targetId, event.candidate);
       }
     };
 
-    stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    if (stream) {
+      stream.getTracks().forEach((track) => pc.addTrack(track, stream));
+    }
 
     pc.onconnectionstatechange = () => {
-      console.log(
+      logger.info("P2P-Listener",
         `[PC] Downstream child state (${targetId}):`,
         pc.connectionState,
       );
@@ -192,7 +260,7 @@ export function useListener() {
     lastReportedLatentRef.current = { ...latentPayload };
 
     socket.on("connect", () => {
-      console.log(
+      logger.info("P2P-Listener",
         "Connected to Tracker as Observer. Requesting ambient WebRTC connection.",
       );
       setSocketId(socket.id || null);
@@ -209,7 +277,7 @@ export function useListener() {
       async (data: { targetPeer: { id: string } }) => {
         if (statusRef.current !== "LISTENING" || pendingUpstreamPcRef.current)
           return;
-        console.log(
+        logger.info("P2P-Listener",
           `[Re-Route] Tracker suggested better adjacent peer: ${data.targetPeer.id}. Hot-swapping...`,
         );
         const swapPc = createUpstreamConnection(data.targetPeer.id, socket);
@@ -219,54 +287,50 @@ export function useListener() {
           offerToReceiveVideo: false,
         });
         await swapPc.setLocalDescription(offer);
-        socket.emit("signal", { target: data.targetPeer.id, signal: offer });
+        emitDescription(socket, data.targetPeer.id, offer);
       },
     );
 
-    socket.on("signal", async (data: { sender: string; signal: any }) => {
-      const { sender, signal } = data;
+    socket.on(
+      "signal",
+      async (data: InboundSignal) => {
+        const { sender, signal } = data;
 
-      if (signal.type === "answer" && upstreamPcRef.current) {
-        if (upstreamPcRef.current.signalingState === "have-local-offer") {
-          await upstreamPcRef.current
-            .setRemoteDescription(new RTCSessionDescription(signal))
-            .catch((e) => console.warn("Failed to set remote answer:", e));
-        } else {
-          console.warn(
-            `[PC] Ignored answer because signalingState is ${upstreamPcRef.current.signalingState}`,
-          );
-        }
-      } else if (signal.type === "offer") {
-        const currentStream = audioStreamRef.current;
-        if (!currentStream) {
-          console.warn(
-            `[PC] Rejected downstream request from ${sender}: stream not ready.`,
-          );
-          return;
-        }
+        if (signal.type === "answer" && upstreamPcRef.current) {
+          if (upstreamPcRef.current.signalingState === "have-local-offer") {
+            await applyRemoteSignal(upstreamPcRef.current, signal)
+              .catch((e) => console.warn("Failed to set remote answer:", e));
+          } else {
+            console.warn(
+              `[PC] Ignored answer because signalingState is ${upstreamPcRef.current.signalingState}`,
+            );
+          }
+        } else if (signal.type === "offer") {
+          const currentStream = audioStreamRef.current;
+          // RELAY CHANGE: We don't reject if stream is null.
+          // We accept the connection, and when our upstream provides the stream,
+          // we will push the tracks to this child in `pc.ontrack`.
 
-        let childPc = downstreamPcsRef.current.get(sender);
-        if (!childPc)
-          childPc = createDownstreamConnection(sender, currentStream, socket);
+          let childPc = downstreamPcsRef.current.get(sender);
+          if (!childPc)
+            childPc = createDownstreamConnection(sender, currentStream, socket);
 
-        await childPc.setRemoteDescription(new RTCSessionDescription(signal));
-        const answer = await childPc.createAnswer();
-        await childPc.setLocalDescription(answer);
-        socket.emit("signal", { target: sender, signal: answer });
-      } else if (signal.type === "candidate") {
-        if (upstreamPcRef.current && upstreamPcRef.current.remoteDescription) {
-          await upstreamPcRef.current
-            .addIceCandidate(new RTCIceCandidate(signal.candidate))
-            .catch((e) => console.warn(e));
+          await applyRemoteSignal(childPc, signal);
+          const answer = await childPc.createAnswer();
+          await childPc.setLocalDescription(answer);
+          emitDescription(socket, sender, answer);
+        } else if (signal.type === "candidate") {
+          if (upstreamPcRef.current && upstreamPcRef.current.remoteDescription) {
+            await applyRemoteSignal(upstreamPcRef.current, signal)
+              .catch((e) => console.warn(e));
+          }
+          const childPc = downstreamPcsRef.current.get(sender);
+          if (childPc && childPc.remoteDescription) {
+            await applyRemoteSignal(childPc, signal)
+              .catch((e) => console.warn(e));
+          }
         }
-        const childPc = downstreamPcsRef.current.get(sender);
-        if (childPc && childPc.remoteDescription) {
-          await childPc
-            .addIceCandidate(new RTCIceCandidate(signal.candidate))
-            .catch((e) => console.warn(e));
-        }
-      }
-    });
+      });
 
     socket.on("broadcast_started", () => {
       // The Tracker will emit a map update soon anyway, which might trigger a re-route.
@@ -332,10 +396,10 @@ export function useListener() {
     };
   }, []);
 
-  const requestUpstreamPeer = (
+  function requestUpstreamPeer(
     socket: Socket,
     latentState: { x: number; y: number; spin: number },
-  ) => {
+  ) {
     socket.emit(
       "request_peers",
       { latentState },
@@ -352,10 +416,13 @@ export function useListener() {
               offerToReceiveVideo: false,
             });
             await pc.setLocalDescription(offer);
-            socket.emit("signal", { target: targetPeer.id, signal: offer });
+
+            eventBus.emit('relay_selected', { parentNodeId: targetPeer.id });
+
+            emitDescription(socket, targetPeer.id, offer);
           }
         } else {
-          console.log("No active broadcasts or network saturated.");
+          logger.info("P2P-Listener", "No active broadcasts or network saturated.");
           setStatus("AMBIENT");
         }
       },
@@ -367,7 +434,7 @@ export function useListener() {
       return;
 
     if (targetNodeId && socketRef.current && socketRef.current.connected) {
-      console.log(`Explicitly tuning into broadcast: ${targetNodeId}`);
+      logger.info("P2P-Listener", `Explicitly tuning into broadcast: ${targetNodeId}`);
       if (
         upstreamPcRef.current &&
         upstreamTargetIdRef.current === targetNodeId
@@ -389,10 +456,7 @@ export function useListener() {
           offerToReceiveVideo: false,
         });
         await swapPc.setLocalDescription(offer);
-        socketRef.current.emit("signal", {
-          target: targetNodeId,
-          signal: offer,
-        });
+        emitDescription(socketRef.current, targetNodeId, offer);
       } else if (!upstreamPcRef.current) {
         // Direct specific connection
         upstreamTargetIdRef.current = targetNodeId;
@@ -404,10 +468,7 @@ export function useListener() {
           offerToReceiveVideo: false,
         });
         await pc.setLocalDescription(offer);
-        socketRef.current.emit("signal", {
-          target: targetNodeId,
-          signal: offer,
-        });
+        emitDescription(socketRef.current, targetNodeId, offer);
       }
       setStatus("LISTENING");
     } else if (!targetNodeId) {
@@ -435,47 +496,22 @@ export function useListener() {
     }
   };
 
-  const stopListening = () => {
-    // Do NOT null the audio stream or srcObject here.
-    // We keep the audio pipeline alive so ambient audio resumes seamlessly
-    // once the new upstream peer connection fires ontrack.
-
-    if (upstreamPcRef.current) {
-      upstreamPcRef.current.close();
-      upstreamPcRef.current = null;
-    }
-    if (pendingUpstreamPcRef.current) {
-      pendingUpstreamPcRef.current.close();
-      pendingUpstreamPcRef.current = null;
-    }
-
-    upstreamTargetIdRef.current = null;
-    setUpstreamTargetId(null);
-
-    downstreamPcsRef.current.forEach((pc) => pc.close());
-    downstreamPcsRef.current.clear();
-
-    setStatus("AMBIENT");
-    statusRef.current = "AMBIENT"; // Force immediate sync for async closures so onTrack doesn't upgrade
-
-    // Reconnect to the mesh as an ambient observer
-    if (socketRef.current && socketRef.current.connected) {
-      const latentPayload = lastReportedLatentRef.current || {
-        x: Math.random() * window.innerWidth,
-        y: Math.random() * window.innerHeight,
-        spin: Math.random(),
-      };
-      requestUpstreamPeer(socketRef.current, latentPayload);
-    }
-  };
 
   // Soft untune: keep the WebRTC connection alive, just toggle status.
   // The audio stream stays connected and useSpatialAudio switches to ambient filtering.
   const untuneFromBroadcast = () => {
+    // Tell server we left to close the PoC session
+    if (socketRef.current && socketRef.current.connected) {
+      socketRef.current.emit("leave_broadcast");
+    }
+
     setStatus("AMBIENT");
     statusRef.current = "AMBIENT";
     // Clear the UI targeting — the ref keeps the real upstream peer ID
     setUpstreamTargetId(null);
+    if (socketRef.current?.id) {
+      eventBus.emit('listener_left', { nodeId: socketRef.current.id });
+    }
   };
 
   return {

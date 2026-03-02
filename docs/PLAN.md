@@ -1,31 +1,79 @@
-# Resonance - Roadmap & Plan
+# Resonance — Road to MVP (Plan)
 
-## Current Status: Phase 1 - Prototype (Active)
+## 0. Core Design Principles
+1. **Off-Chain First:** All real-time systems (audio, physics, discovery, UX) remain off-chain. Blockchain is ONLY used for identity anchoring, periodic settlement, and governance snapshots.
+2. **Event-Driven Architecture:** Everything emits events (`listener_joined`, `listener_left`, `relay_selected`, `curation_support_changed`, `broadcast_started`, `broadcast_ended`).
+3. **State Layers:**
+   - **Layer A** — Real-time ephemeral (WebRTC + simulation)
+   - **Layer B** — Persistent off-chain index (DB)
+   - **Layer C** — Cryptographic anchor (blockchain)
 
-### Accomplished
-- Next.js framework initialized with Tailwind v4, TS, App Router, and pnpm.
-- Initial theoretical layout and styling conventions seeded.
-- Implement the live audio P2P transport layer (WebRTC mesh and basic Socket coordination).
-- Construct the primary Simulation Field using Canvas, heavily modularized into `usePhysicsEngine` and `useAnimationFrame` to maintain 60FPS.
-- **Physics Engine:** Implemented Attanasi et al. spin-wave flocking, cultural gravity, anti-monopoly repulsion, and user override interactions.
-- **Audio Coupling:** Spatial audio decoding, panning, and low-pass filtering are dynamically driven by the true latent distances calculated by the physics simulation.
-- **UX Polish:** Click-to-connect/disconnect within broadcast halo zones. Gravity gated to self-agent only when actively tuned in. Ambient audio stream survives disconnect/reconnect cycles. Broadcast terminal exposes pre-ignition telemetry waveform.
-- **Code Quality Audit:** Shared types (`src/lib/types.ts`) and physics constants (`src/lib/physicsConstants.ts`) extracted. Eliminated all `any` types across hooks. Fixed leaked `setInterval` in broadcaster. Typed `interactionTimeout` ref. Cached canvas 2D context. Removed redundant `AudioContext.suspend()`.
+## 1. System Architecture (MVP Target)
+- **Frontend:** Next.js App Router, Canvas Simulation Field, WebAudio spatial engine, WebRTC transport.
+- **Coordination Layer:** Node signaling server (Socket), Session graph tracker, Energy accounting engine.
+- **Storage:** Postgres (metadata + graphs), Object storage (archives), Optional IPFS adapter.
+- **Blockchain (Phase-delayed):** Identity registry, Settlement contract, Treasury contract.
 
-### Phase 2: User Experience & Core MVP Setup
-- **WebRTC Refinement:** Fine-tune the WebRTC relay logic (listeners passing packets to other listeners/BitTorrent-style scaling).
-- **Network Telemetry:** Implement dynamic network metrics (e.g., true data transfer rates) feeding back into the simulation physics.
-- Code the Flow Energy simulation logic ($E_0 e^{-\lambda t}$) and live off-chain micro-support algorithms (`support_rate = energy / minute`) as experiential metrics.
-- Implement Proof-of-Curation (PoC) metrics for Curators (e.g., Listener Retention Score, Discovery Impact) to align channel creation with quality before tokens are involved.
-- Develop archival storage pipelines for "Ghosts of past broadcasts" (IPFS-esque).
+## 2. Role Model Implementation
+- [x] **Listener:** connects to field, consumes streams, optionally relays packets, produces support signals.
+- [x] **Broadcaster:** publishes live audio, attaches to a Channel, signs session metadata.
+- [ ] **Curator:** owns a Curatorial Graph, selects broadcasters, accumulates Proof-of-Curation metrics.
+- [x] **Relay Node:** automatic role, selected by network health based on latent spatial distance and bandwidth.
 
-### Phase 3: Cryptographic Identity & Metadata
-- Integrate silent wallet-auth.
-- Implement broadcast signing and participant cryptographic proofs.
-- Setup prerequisites for on-chain state anchoring.
+## 3. Development Phases
 
-### Phase 4: Blockchain Coordination & Governance
-- Engineer the periodic energy to on-chain settlement pipeline.
-- Issuance of Resonance Marks for historical memory and status tracking.
-- Transition Protocol Treasury stewardship to DAO weighting parameters based on the Resonance math parameters (`governance_weight = time_present × scenes_supported × relay_contribution`).
-- Integrate Curator Stake Commitments to launch active channels.
+### PHASE 1 — Stabilize Core Runtime
+**Goals:** deterministic physics loop, stable WebRTC relay switching, telemetry normalization.
+**Deliverable:** Stable 100-node simulated test.
+- [x] Next.js framework initialized with Tailwind v4, TS, App Router, pnpm.
+- [x] Isolate physics worker thread (`usePhysicsEngine`, `useAnimationFrame`) for 60FPS simulation stability.
+- [x] Implement deterministic physics loop (spin-wave flocking, cultural gravity, anti-monopoly repulsion).
+- [x] Abstract transport layer (P2P WebRTC mesh + Socket coordination).
+- [x] Stable WebRTC relay switching (BitTorrent-style routing based on capacity and latent spatial distance).
+- [x] Telemetry normalization (network pipeline stress dictates visual canvas distortion).
+- [x] Introduce dedicated event bus architecture.
+- [x] Refactor and decompose physics/transport core engines for enhanced performance and readability.
+- [ ] Infrastructure: Implement E2E Testing (Playwright) for the P2P connection loops.
+- [ ] Infrastructure: Setup GitHub Actions CI/CD pipeline for automated type checking and static analysis.
+
+### PHASE 2 — Curatorial Graph Engine
+**Goals:** persistent curator identity, channel abstraction, attribution tracking.
+**Deliverable:** Curators visible as first-class entities.
+- [x] Architect Proof-of-Curation (PoC) metrics (Session Retention, Discovery Impact).
+- [x] Mock Curatorial Graphs in coordination server (`server.js`).
+- [x] DB schema for graph edges (Postgres).
+- [x] Session attribution scoring pipeline.
+- [x] Retention metrics pipeline.
+
+### PHASE 3 — Archive System (“Ghost Layer”)
+**Goals:** replayable broadcasts, temporal memory.
+**Deliverable:** Past broadcasts appear in field.
+- [x] Chunk recording pipeline.
+- [x] Metadata snapshots.
+- [x] Replay loader (Contract interface defined).
+
+### PHASE 4 — Identity Layer
+**Goals:** silent wallet creation, cryptographic signing.
+**Deliverable:** Users possess portable identity.
+- [ ] Wallet abstraction (silent wallet creation).
+- [ ] Session signature verification.
+- [ ] Identity persistence.
+
+### PHASE 5 — Energy Accounting
+**Goals:** finalize off-chain economy.
+**Deliverable:** Full economic simulation without tokens.
+- [x] Energy decay scheduler (Flow Energy thermodynamic math $E_0 e^{-\lambda t}$ in `server.js`).
+- [ ] Curator reward calculation.
+- [ ] Relay contribution scoring.
+- [ ] Engineer the periodic energy to on-chain settlement pipeline.
+
+## 6. Success Metrics (MVP)
+**Technical:**
+- <150ms audio latency
+- 60FPS simulation stability
+- >80% relay success rate
+
+**Behavioral:**
+- listeners discover new broadcasts
+- curators create persistent channels
+- sessions organically cluster

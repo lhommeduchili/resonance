@@ -21,7 +21,7 @@ export function AudioWaveform({ stream }: AudioWaveformProps) {
 
         // Initialize Audio Context if absent
         if (!audioCtxRef.current) {
-            audioCtxRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+            audioCtxRef.current = new (window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
         }
 
         const audioCtx = audioCtxRef.current;

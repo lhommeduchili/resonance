@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { SpatialData } from "../simulation/usePhysicsEngine";
 import {
   MAX_AUDIO_DISTANCE,
@@ -21,8 +21,18 @@ export function useSpatialAudio(
     source: MediaStreamAudioSourceNode | null;
   } | null>(null);
 
-  // Initialize global audio graph ONCE
+  const [isInitialized, setIsInitialized] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Keep streamRef in sync so initAudio can access it
   useEffect(() => {
+    streamRef.current = stream;
+  }, [stream]);
+
+  const initAudio = () => {
+    if (isInitialized || audioContextRef.current) return;
+
+    // Explicitly invoked by user click
     const ctx = new AudioContext();
     audioContextRef.current = ctx;
 
@@ -30,13 +40,22 @@ export function useSpatialAudio(
     const filter = ctx.createBiquadFilter();
     const masterGain = ctx.createGain();
 
+    // Safety limiter: transparent brick-wall to catch feedback loops
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -3;
+    limiter.knee.value = 0;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.001;
+    limiter.release.value = 0.1;
+
     filter.type = "lowpass";
     filter.frequency.value = MIN_LOWPASS_FREQ;
     filter.Q.value = 1;
 
     panner.connect(filter);
     filter.connect(masterGain);
-    masterGain.connect(ctx.destination);
+    masterGain.connect(limiter);
+    limiter.connect(ctx.destination);
 
     nodesRef.current = { panner, filter, masterGain, source: null };
 
@@ -80,13 +99,26 @@ export function useSpatialAudio(
 
     const intervalId = setInterval(updateAudioSpatial, 50);
 
+    // If a stream already arrived before initAudio was called, connect it now
+    if (streamRef.current && nodesRef.current) {
+      nodesRef.current.source = ctx.createMediaStreamSource(streamRef.current);
+      nodesRef.current.source.connect(nodesRef.current.panner);
+    }
+
+    setIsInitialized(true);
+    return () => clearInterval(intervalId);
+  };
+
+  // Clean up AudioContext strictly on unmount
+  useEffect(() => {
     return () => {
-      clearInterval(intervalId);
-      ctx.close();
-      audioContextRef.current = null;
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(console.warn);
+        audioContextRef.current = null;
+      }
       nodesRef.current = null;
-    };
-  }, [spatialDataRef]);
+    }
+  }, []);
 
   // Update MediaStream independently when it changes, avoiding suspended audio contexts
   useEffect(() => {
@@ -112,7 +144,8 @@ export function useSpatialAudio(
   }, [stream]);
 
   return {
-    audioContext: audioContextRef.current,
+    isInitialized,
+    initAudio,
     resumeAudio: () => audioContextRef.current?.resume(),
   };
 }

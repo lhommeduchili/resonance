@@ -3,21 +3,25 @@
 ## Overview
 Resonance is a cryptoeconomic peer-to-peer radio network and self-organized media ecology. It replaces central streaming servers with a live simulation field where stations (oscillating nodes) and listeners (particles) interact to form cultural scenes based on laws of alignment, attraction, and energy decay.
 
-## Core Architecture
+## Core Architecture & State Layers
 - **Tech Stack:** Next.js 14+ (App Router), TypeScript, Tailwind CSS, pnpm.
-- **Layer 1: Live Audio Transport (P2P)**: WebRTC mesh + relay topology, libp2p. Listeners automatically become relay nodes, strengthening the broadcast swarm (BitTorrent-style). Adaptive bitrate Opus encoding.
-  - *Audio Processing:* Governed by isolated hooks (`useSpatialAudio`) leveraging the Web Audio API for environmental filtering.
-- **Layer 2: Identity & Metadata**: Built on cryptographic identity (wallet public keys). Participation generates a portable reputation without traditional accounts.
-- **Layer 3: Archival Layer**: Segments are stored via distributed storage (IPFS-like). Archivists earn incentives for hosting culturally significant broadcasts.
-- **Layer 4: Coordination Layer (Blockchain)**: Blockchain acts as a notary, not a server. Records only rare, meaningful events: Broadcast Birth Certificates, Identity Anchoring, Periodic Energy Settlement, and Governance Votes.
-- **Simulation Field (State & UI Layer)**: Handled client-side via high-performance Canvas.
-  - *Rendering Pipeline:* Strongly modularized. Raw physics and node orchestration are handled exclusively by `usePhysicsEngine`, while rendering loops are managed by `useAnimationFrame` to prevent React closure staleness and ensure 60FPS.
+- **Architectural Constraints:** All subsystem communication MUST respect the exact interface boundaries defined in `docs/ARCHITECTURE.md`.
+- **Layer A: Real-time ephemeral (WebRTC + simulation)**
+  - *Audio Transport Contract:* Adheres to `AudioTransport`. WebRTC mesh + relay topology, libp2p. Handled precisely behind the interface.
+  - *Simulation Engine Contract:* Pure deterministic system `SimulationEngine`. Raw physics handled by `usePhysicsEngine`. UI acts ONLY as renderer.
+- **Layer B: Persistent off-chain index (DB)**
+  - *Storage Contract:* Governed by `PersistenceAdapter`. Handles PostgreSQL, IPFS, and Object Storage without leaking implementation logic to real-time systems.
+- **Layer C: Cryptographic anchor (blockchain)**
+  - *Blockchain Adapter Contract:* Acts as a plugin (`SettlementAdapter`), not infrastructure. Never knows about real-time topology.
+
+## Event-Driven Architecture
+Every system action emits discrete events off-chain: `listener_joined`, `listener_left`, `relay_selected`, `curation_support_changed`, `broadcast_started`, `broadcast_ended`.
 
 ## The Resonance Field & Physics
 - The UI is a visual representation of social and cultural physics.
 - **Agents:** Participants exist as particles (listeners) and oscillating nodes (broadcasts). 
 - **Mechanics:** 
-  - *Alignment:* Listeners' tastes gradually align with nearby broadcasts.
+  - *Alignment:* Listeners' tastes gradually align with nearby broadcasts (spin-wave flocking).
   - *Attraction (Gravity):* Popular broadcasts exert pull on listener particles.
   - *Repulsion (Anti-Monopoly):* Prevents single-node dominance by increasing "energy cost" for massive scale, encouraging fragmentation into sub-scenes.
   - *Noise (Exploration):* Stochastic drift that ensures discovery and prevents cultural stagnation.
@@ -31,13 +35,19 @@ Resonance is a cryptoeconomic peer-to-peer radio network and self-organized medi
 - **Protocol Treasury:** A small percentage of circulating Flow Energy converts into a stable operational reserve that sustains the real infrastructure (indexers, bootstrap relays). No direct user gas fees.
 
 ## Functional Roles
+- **Listener:** Connects to field, consumes streams, automatically relies packets.
+- **Broadcaster:** Publishes live audio, attaches to a Curator's Channel.
+- **Relay Node:** Automatic role selected by network health (capacity and adjacency).
 - **Curators (DJs, scene organizers):** Act as "cultural routers." Their value is proven via Proof-of-Curation (PoC) metrics:
   - *Listener Retention Score:* How long people stay in their channel.
   - *Discovery Impact:* Success of unknown artists after being surfaced by the curator.
   - *Stake Commitment:* Curators stake tokens to launch channels, aligning incentives with quality.
 
-
 ## Development Constraints (Strict)
 - The blockchain is a notary, NOT a server. Extensively expensive compute and streaming happens off-chain.
 - Standard Web3 UX conventions (intrusive transaction popups, buying tokens) must be hidden; "Flow Energy" represents systemic fuel, not wealth.
 - Delay UI abstraction: The system must communicate its mechanics viscerally within the first 10 seconds through sound and visual physics. No onboarding screens.
+- No feature may access WebRTC directly; abstracted through transport layer.
+- All physics constants centralized. Simulation never reads UI state.
+- **Core Web Vitals:** Strict targets. Cumulative Layout Shift (CLS) = 0. Largest Contentful Paint (LCP) < 1.2s. Interaction to Next Paint (INP) < 200ms.
+- **Bundle Triage:** The initial JS chunk size must be strictly monitored via CI to prevent excessive loader bloat. Use dynamic imports for off-screen components.

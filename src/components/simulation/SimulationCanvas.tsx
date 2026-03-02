@@ -17,7 +17,9 @@ export function SimulationCanvas({
     spatialDataRef,
     globalPeerMap = [],
     socketId = null,
-    connectedNodeId = null
+    connectedNodeId = null,
+    isReady = true,
+    activeProfile = "VOICE"
 }: {
     isActive?: boolean;
     isListener?: boolean;
@@ -26,10 +28,12 @@ export function SimulationCanvas({
     globalPeerMap?: PeerMapEntry[];
     socketId?: string | null;
     connectedNodeId?: string | null;
+    isReady?: boolean;
+    activeProfile?: string;
 }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
-    const engine = usePhysicsEngine(isActive, isListener, dataTransferRate, spatialDataRef, connectedNodeId);
+    const engine = usePhysicsEngine(isActive, isListener, dataTransferRate, spatialDataRef, connectedNodeId, isReady, activeProfile);
 
     useEffect(() => {
         const canvas = canvasRef.current;

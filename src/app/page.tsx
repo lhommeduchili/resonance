@@ -1,10 +1,15 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { SimulationCanvas } from "@/components/simulation/SimulationCanvas";
+import dynamic from "next/dynamic";
+const SimulationCanvas = dynamic(
+  () => import("@/components/simulation/SimulationCanvas").then((mod) => mod.SimulationCanvas),
+  { ssr: false }
+);
 import { useListener } from "@/components/p2p/useListener";
 import { useSpatialAudio } from "@/components/p2p/useSpatialAudio";
 import type { SpatialData } from "@/components/simulation/usePhysicsEngine";
+import { eventBus } from "@/lib/eventBus";
 
 export default function Home() {
   const { status, activePeers, socketId, globalPeerMap, dataTransferRate, audioStream, upstreamTargetId, startListening, stopListening, untuneFromBroadcast } = useListener();
@@ -18,7 +23,7 @@ export default function Home() {
   });
 
   // Power the localized audio physics
-  const { resumeAudio } = useSpatialAudio(audioStream, spatialDataRef);
+  const { initAudio, resumeAudio } = useSpatialAudio(audioStream, spatialDataRef);
 
   // Poll the physics engine purely to emit network boundary events
   // This avoids constant React re-renders while still pushing data to the network hook
@@ -33,6 +38,28 @@ export default function Home() {
     }, 500);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Global Event Bus Debug Listener (Proves Decoupling)
+  useEffect(() => {
+    const unsub_arr: Array<() => void> = [];
+
+    const bindLog = (eventName: Parameters<typeof eventBus.on>[0]) => {
+      const handler = (payload: unknown) => {
+        console.log(`%c[EventBus] %c${eventName}`, "color: #ff00ff; font-weight: bold;", "color: #00ffff;", payload);
+      };
+      eventBus.on(eventName, handler);
+      unsub_arr.push(() => eventBus.off(eventName, handler));
+    };
+
+    bindLog("listener_joined");
+    bindLog("listener_left");
+    bindLog("relay_selected");
+    bindLog("broadcast_started");
+    bindLog("broadcast_ended");
+    bindLog("curation_support_changed");
+
+    return () => unsub_arr.forEach(unsub => unsub());
   }, []);
 
   return (
@@ -65,9 +92,10 @@ export default function Home() {
       {/* Initialization Overlay */}
       {!isAudioReady && (
         <div
-          className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm cursor-pointer"
+          className="absolute inset-0 z-50 flex items-center justify-center bg-black/40 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
+            initAudio();
             resumeAudio();
             setIsAudioReady(true);
           }}
@@ -107,7 +135,39 @@ export default function Home() {
           globalPeerMap={globalPeerMap}
           socketId={socketId}
           connectedNodeId={upstreamTargetId}
+          isReady={isAudioReady}
         />
+      </div>
+
+      {/* Invisible Accessibility (A11y DOM Mirror) */}
+      <div className="sr-only" aria-live="polite">
+        <h2>Active Broadcast Nodes</h2>
+        {globalPeerMap
+          .filter((peer) => peer.role === "root" || peer.role === "relay")
+          .map((peer) => {
+            const isTuned = status === "LISTENING" && upstreamTargetId === peer.id;
+            return (
+              <button
+                key={peer.id}
+                onFocus={() => {
+                  if (spatialDataRef.current) {
+                    spatialDataRef.current.hoveredNodeId = peer.id;
+                  }
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (isTuned) {
+                    untuneFromBroadcast();
+                  } else {
+                    startListening(peer.id);
+                  }
+                }}
+                aria-pressed={isTuned}
+              >
+                {isTuned ? "Disconnect from" : "Tune into"} Broadcast Node {peer.id.slice(0, 4)}
+              </button>
+            );
+          })}
       </div>
 
     </main>

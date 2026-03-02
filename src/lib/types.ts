@@ -14,6 +14,24 @@ export interface LatentState {
 }
 
 // ---------------------------------------------------------------------------
+// Curatorial Graphs (Proof-of-Curation)
+// ---------------------------------------------------------------------------
+
+export interface PoCMetrics {
+    discoveryImpact: number; // Unique listeners tuned into this graph
+    retentionScore: number;  // Average session length in seconds
+}
+
+export interface CuratorialGraph {
+    id: string;
+    curatorWallet: string;
+    name: string;
+    tags: string[];
+    rules: string[];
+    poc: PoCMetrics;
+}
+
+// ---------------------------------------------------------------------------
 // Peer map (serialized topology from the coordination server)
 // ---------------------------------------------------------------------------
 
@@ -22,6 +40,8 @@ export interface PeerMapEntry {
     role: "root" | "relay" | "observer";
     latentState: LatentState;
     connections: number;
+    energy: number;
+    activeCuratorialGraph?: CuratorialGraph; // Only populated for "root" nodes
 }
 
 // ---------------------------------------------------------------------------
@@ -39,3 +59,25 @@ export type BroadcasterStatus = "IDLE" | "CONNECTING" | "LIVE" | "ERROR";
 export const ICE_SERVERS: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
 ];
+
+// ---------------------------------------------------------------------------
+// WebRTC signaling contract (discriminated union)
+// ---------------------------------------------------------------------------
+
+/** All possible payloads exchanged over the signaling channel. */
+export type SignalPayload =
+    | { type: "offer"; sdp: string }
+    | { type: "answer"; sdp: string }
+    | { type: "candidate"; candidate: RTCIceCandidateInit };
+
+/** Outbound envelope: client → server (includes the intended target). */
+export interface SignalEnvelope {
+    target: string;
+    signal: SignalPayload;
+}
+
+/** Inbound envelope: server → client (includes the original sender). */
+export interface InboundSignal {
+    sender: string;
+    signal: SignalPayload;
+}

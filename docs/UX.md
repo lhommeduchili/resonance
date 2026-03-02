@@ -795,9 +795,16 @@ early listeners become elders
 
 scenes develop lineage
 
-broadcasts gain mythology
-
 cultural capital replaces financial capital
+
+11. Invisible Accessibility (Screen Readers & Keyboards)
+The "Felt Encounter" must be universal, even without sight or a mouse.
+
+Despite being a Canvas-first simulation, we MUST maintain a visually hidden, semantically rich HTML tree beneath it.
+
+- DOM Mirrors: Every active node has an `aria-live` button corresponding to its spatial location.
+- Keyboard Navigation: Tabbing moves the user's particle through the latent space toward the requested node, triggering the audio crossfades naturally.
+- Screen Readers: Spatial audio proximity is narrated (`"Approaching broadcast: Deep Sleep. Audio intensifying..."`) to recreate the visceral experience without sight.
 
 You get something extremely rare online:
 

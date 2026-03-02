@@ -38,15 +38,22 @@ Build and maintain "Resonance," a cryptoeconomic P2P radio network and simulatio
 * **Server Components & Actions:** Use Next.js server actions for interfacing with indexers or handling the off-chain aggregation of Flow Energy prior to periodic settlement.
 * **Security:** Keep wallet signing logic explicit, but UX frictionless.
 
-## 3. SEO, Aesthetics & Production Readiness
+### State Management & Error Handling
+* **State Paradigm:** Clearly delineate between React State (used for declarative UI/Metadata) and Mutable Refs (`useRef`, used for Animation loops, WebRTC instances). React state must *never* track variables inside the 60FPS physics loop.
+* **Error Boundaries:** Utilize Next.js `error.tsx` and custom React Error Boundaries strategically. Ensure WebRTC failures or WebGL context losses do not crash the entire application DOM.
+* **Observability:** Ban the deployment of raw `console.log` for production code. Mandate a structured logging wrapper or telemetry service to monitor the P2P mesh performance and dropped frames.
+
+## 3. SEO, Aesthetics, & Production Readiness
 1. **Aesthetic Consistency:** Dark space, detuned minimal vibe. Glowing oscillating nodes, flowing particle paths, faint trails. No traditional menus or onboarding carousels.
 2. **First 10 Seconds:** Optimize deeply for the opening experience. Fast load times, immediate ambient spatial audio, no splash screens.
+3. **Accessibility (a11y):** Despite being a Canvas-centric application, mandate invisible semantic DOM overlays for critical actions like "Ignite Transmission" or "Connect Wallet". Ensure baseline screen-reader and keyboard-navigation compatibility.
 
 ## 4. The Development Workflow
 1. **Understand & Plan:** Check `docs/SPECIFICATIONS.md`, `PHYSICS.md`, and `UX.md` before coding.
 2. **Document:** Keep the conceptual documentation updated.
 3. **Test:** Write Vitest rules for WebRTC and economic math (e.g., Energy decay logic).
 4. **Implement:** Write clean, minimal implementations. Refactor complex effects immediately.
+5. **Code Quality:** Ensure adherence to ESLint, Prettier, and local static analysis. All TypeScript must strictly type-check.
 
 ## 5. Instructions for the Agent
 * **Rethink UI:** If asked to build a "button" or a "menu," propose a spatial/physics-based alternative first. 

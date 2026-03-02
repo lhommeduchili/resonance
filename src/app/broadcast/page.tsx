@@ -14,10 +14,12 @@ export default function BroadcastTerminal() {
     socketId,
     globalPeerMap,
     activeStream,
+    activeProfile,
     previewStream,
     startBroadcast,
     stopBroadcast,
     changeDevice,
+    changeAudioProfile,
   } = useBroadcaster({ streamKey: "dev_key" });
   const [selectedDevice, setSelectedDevice] = useState<string>("");
 
@@ -54,6 +56,32 @@ export default function BroadcastTerminal() {
         </header>
 
         <section className="space-y-6">
+          <div className="space-y-1">
+            <span className="block text-accent uppercase tracking-widest text-xs mb-1">
+              Transmission Mode:
+            </span>
+            <div className="flex border border-accent rounded overflow-hidden">
+              <button
+                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors ${activeProfile === "VOICE"
+                  ? "bg-foreground text-black font-bold"
+                  : "bg-black/40 text-accent hover:bg-black/60"
+                  }`}
+                onClick={() => changeAudioProfile("VOICE")}
+              >
+                [ Voice ]
+              </button>
+              <button
+                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors ${activeProfile === "HIGH_FIDELITY"
+                  ? "bg-foreground text-black font-bold"
+                  : "bg-black/40 text-accent hover:bg-black/60"
+                  }`}
+                onClick={() => changeAudioProfile("HIGH_FIDELITY")}
+              >
+                [ High-Fidelity ]
+              </button>
+            </div>
+          </div>
+
           <div>
             <span className="block text-accent uppercase tracking-widest text-xs mb-1">
               State:
@@ -79,6 +107,8 @@ export default function BroadcastTerminal() {
             </span>
             <AudioWaveform stream={activeStream ?? previewStream} />
           </div>
+
+
 
           {devices.length > 0 && (
             <div className="space-y-1">
