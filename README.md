@@ -2,19 +2,19 @@
 
 **a cryptoeconomic peer-to-peer webcasting network**
 
-Resonance is a decentralized, peer-to-peer audio streaming network designed to reintroduce 
+resonance is a decentralized, peer-to-peer audio streaming network designed to reintroduce 
 *collective cultural broadcasting* into the web3 era. 
 
-Unlike contemporary algorithmic streaming platforms, resonance treats webcasting as a complex system 
+unlike contemporary algorithmic streaming platforms, resonance treats webcasting as a complex system 
 where listeners, broadcasters, curators, archivists, and relay nodes participate in a shared media 
 ecology.
 
 ## vision
 
-_A shared auditory commons where presence, contribution, and memory form a decentralized 
+_a shared auditory commons where presence, contribution, and memory form a decentralized 
 culture._
 
-The goal is to restore radio as a collective experience — native to the internet, owned by its 
+the goal is to restore radio as a collective experience — native to the internet, owned by its 
 participants, and governed by its community.
 
 ## core features
@@ -45,46 +45,46 @@ experiences and emergent simulated complexity over standard menus.
 
 ### installation
 
-1. Clone the repository:
+1. clone the repository:
 ```bash
 git clone https://github.com/your-org/resonance.git
 cd resonance
 ```
 
-2. Install dependencies:
+2. install dependencies:
 ```bash
 pnpm install
 ```
 
-3. Run the development environment:
+3. run the development environment:
 ```bash
 pnpm run dev
 ```
 
-Visit `http://localhost:3000` to enter the simulation field.
+visit `http://localhost:3000` to enter the simulation field.
 
 ## documentation
 
-Comprehensive documentation about the project's vision, architecture, and mechanics can be found in the `docs/` directory:
+comprehensive documentation about the project's vision, architecture, and mechanics can be found in the `docs/` directory:
 
-- [RESONANCE Overview](docs/RESONANCE.md)
-- [Specifications](docs/SPECIFICATIONS.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Physics & Engine](docs/PHYSICS.md)
-- [UX Philosophy](docs/UX.md)
-- [Project Plan](docs/PLAN.md)
-- [Contributing Guidelines](docs/CONTRIBUTING.md)
-- [Code of Conduct](docs/CODE_OF_CONDUCT.md)
-- [Security Policy](docs/SECURITY.md)
-- [License](docs/LICENSE.md)
+- [resonance overview](docs/RESONANCE.md)
+- [specifications](docs/SPECIFICATIONS.md)
+- [architecture](docs/ARCHITECTURE.md)
+- [physics & engine](docs/PHYSICS.md)
+- [ux philosophy](docs/UX.md)
+- [project plan](docs/PLAN.md)
+- [contributing guidelines](docs/CONTRIBUTING.md)
+- [code of conduct](docs/CODE_OF_CONDUCT.md)
+- [security policy](docs/SECURITY.md)
+- [license](docs/LICENSE.md)
 
 ## contributing
 
-We welcome contributions to Resonance! Whether you want to improve the WebRTC mesh logic, refine the Canvas 60FPS simulation, or contribute to the cryptoeconomic design.
+we welcome contributions to resonance! whether you want to improve the WebRTC mesh logic, refine the Canvas 60FPS simulation, or contribute to the cryptoeconomic design.
 
-Please read our [Contributing Guidelines](docs/CONTRIBUTING.md) and our [Code of Conduct](docs/CODE_OF_CONDUCT.md) before submitting pull requests.
+please read our [contributing guidelines](docs/CONTRIBUTING.md) and our [code of conduct](docs/CODE_OF_CONDUCT.md) before submitting pull requests.
 
 ## license
 
-This project is licensed under the MIT License - see the [LICENSE](docs/LICENSE.md) file for 
+this project is licensed under the MIT License - see the [LICENSE](docs/LICENSE.md) file for 
 details.
