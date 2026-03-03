@@ -2,8 +2,8 @@
 ## System Interface & Boundary Specification
 
 Audience: Core Engineers / Senior Coding Agent
-Purpose: Freeze architectural boundaries so future evolution (blockchain, scaling, governance)
-does NOT require rewriting the runtime system.
+Purpose: Freeze architectural boundaries so future evolution (blockchain, scaling, governance) does 
+NOT require rewriting the runtime system.
 
 ---
 
@@ -79,10 +79,55 @@ Transport implementation may change:
 
 Simulation remains unchanged.
 
+### Signaling Layer (Nostr)
+
+WebRTC signaling uses **Nostr ephemeral events** via public relays (no central server):
+- **kind 20000:** presence beacons (topology discovery, peer map).
+- **kind 20001:** WebRTC signaling (offers, answers, ICE candidates), NIP-04 encrypted payloads.
+- **Batch unwrapping:** ICE candidates are batched for efficiency. The subscription layer recursively
+  unwraps `batch` signals before dispatching to handlers.
+- **Immediate sends:** critical offer/answer signals bypass the batch queue and publish immediately
+  to all relays.
+
+### ICE Configuration
+- **Development:** STUN-only (Google STUN servers). Host candidates suffice for localhost.
+- **Production:** add a paid TURN provider (e.g. Metered, Twilio, Xirsys) for NAT traversal.
+- Keep total ICE servers under 5 (Firefox performance constraint).
+
 ### Network Resiliency Constraints
 - Signaling and Peer reconnects MUST implement Exponential Backoff.
 - Reconnection attempts MUST jitter to prevent "thundering herd" bottlenecks.
-- Dropped packets or transient ICE failures MUST gracefully renegotiate before bubbling visible errors to the UI Contract.
+- Dropped packets or transient ICE failures MUST gracefully renegotiate before bubbling visible 
+errors to the UI Contract.
+- The broadcaster MUST reset stale PeerConnections when receiving a new offer from an existing peer
+  (handles listener page refresh / reconnect).
+
+---
+
+## 2b. SPATIAL AUDIO CONTRACT
+
+All audible output is routed exclusively through the **Web Audio API spatial graph**.
+
+The hidden `<audio>` element exists solely as a MediaStream keep-alive and MUST remain permanently
+muted.
+
+### Audio Graph
+
+```
+MediaStreamSource → StereoPanner → BiquadFilter (lowpass) → GainNode → DynamicsCompressor → destination
+```
+
+### Dual-Mode Processing
+
+| Mode | Volume | Pan | Lowpass | Effect |
+|---|---|---|---|---|
+| **Active** (LISTENING) | 1.0 | centered (0) | Nyquist (transparent) | pristine, full-spectrum |
+| **Ambient** (AMBIENT) | 0.05–0.4 (distance) | spatial | 150–800 Hz (distance) | muffled, directional |
+
+### Tune/Untune Lifecycle
+- **Tune in** (click halo): instant status toggle to LISTENING; no WebRTC renegotiation.
+- **Untune** (click again): instant status toggle to AMBIENT; connection stays alive.
+- **Reconnect** (after disconnect): status set to CONNECTING; ontrack promotes to LISTENING.
 
 ---
 
@@ -232,9 +277,13 @@ UI MAY NOT:
 - `/src/lib`: Stateless domains, math formulas, contracts, Server Actions.
 
 ### State Management Paradigm
-- **React State (`useState`, Context):** Strictly for declarative UI elements, text, menus, and metadata rendering.
-- **Mutable Refs (`useRef`, `window`):** Exclusively utilized to hold mutable WebRTC connection instances and 60FPS Physics calculation objects. 
+- **React State (`useState`, Context):** Strictly for declarative UI elements, text, menus, and 
+metadata rendering.
+- **Mutable Refs (`useRef`, `window`):** Exclusively utilized to hold mutable WebRTC connection 
+instances and 60FPS Physics calculation objects. 
 - **CRITICAL PERF:** React state MUST NEVER track coordinates inside or be triggered by the `requestAnimationFrame` Canvas loop to prevent catastrophic render bloat.
+- **Observability Constraint:** The use of raw `console.log` is strictly prohibited in production 
+code. All telemetry and debugging must be routed through the dedicated `logger.ts` wrapper.
 
 ---
 
@@ -262,6 +311,11 @@ Example:
 Transport failure → audio drops
 Simulation continues
 Energy accounting continues
+
+**Frontend Isolation:**
+- All Next.js routes must utilize `error.tsx` boundaries to catch render failures.
+- WebGL Context losses or WebRTC fatal errors MUST be caught by custom React Error Boundaries and 
+must not crash the broader DOM tree.
 
 ---
 

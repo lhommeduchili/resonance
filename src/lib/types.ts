@@ -58,6 +58,9 @@ export type BroadcasterStatus = "IDLE" | "CONNECTING" | "LIVE" | "ERROR";
 
 export const ICE_SERVERS: RTCIceServer[] = [
     { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    // NOTE: For production NAT traversal, add a paid TURN provider here
+    // (e.g. Metered, Twilio, or Xirsys). Public free TURN servers are unreliable.
 ];
 
 // ---------------------------------------------------------------------------
@@ -68,7 +71,8 @@ export const ICE_SERVERS: RTCIceServer[] = [
 export type SignalPayload =
     | { type: "offer"; sdp: string }
     | { type: "answer"; sdp: string }
-    | { type: "candidate"; candidate: RTCIceCandidateInit };
+    | { type: "candidate"; candidate: RTCIceCandidateInit }
+    | { type: "batch"; signals: SignalPayload[] };
 
 /** Outbound envelope: client → server (includes the intended target). */
 export interface SignalEnvelope {

@@ -8,11 +8,12 @@
 
 ## 1. Abstract
 
-Resonance is a decentralized, peer-to-peer radio protocol designed to
-reintroduce *collective cultural broadcasting* into the internet era.
-Unlike algorithmic streaming platforms, Resonance treats radio as a
-living economic and social organism where listeners, broadcasters,
-archivists, and relay nodes participate in a shared media ecology.
+Resonance is a decentralized, peer-to-peer audio streaming network designed to reintroduce 
+*collective cultural broadcasting* into the web3 era. 
+
+Unlike contemporary algorithmic streaming platforms, resonance treats webcasting as a complex system 
+where listeners, broadcasters, curators, archivists, and relay nodes participate in a shared media 
+ecology.
 
 The system combines:
 

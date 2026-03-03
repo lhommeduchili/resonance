@@ -14,6 +14,7 @@ export class NodeAudioTransport implements AudioTransport {
     // Map of peer connections for multi-stream archiving capability
     private connections: Map<string, ndc.PeerConnection> = new Map();
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     async publish(stream: unknown): Promise<void> {
         throw new Error('NodeAudioTransport MVP only supports subscribing (recording).');
     }
@@ -62,8 +63,6 @@ export class NodeAudioTransport implements AudioTransport {
             }
         });
 
-        let totalBytesReceived = 0;
-
         pc.onTrack((track) => {
             logger.info("ArchiveNode", `[ArchiveNode] Audio Track acquired from ${peerId}`);
 
@@ -82,7 +81,6 @@ export class NodeAudioTransport implements AudioTransport {
                         const buf = Buffer.from(msg);
                         currentBuffer.push(buf);
                         byteCount += buf.length;
-                        totalBytesReceived += buf.length;
 
                         if (byteCount >= CHUNK_SIZE_BYTES) {
                             const fullChunk = Buffer.concat(currentBuffer);

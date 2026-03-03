@@ -2,28 +2,25 @@
 import { logger } from "@/lib/logger";
 
 import { useEffect, useRef, useState } from "react";
-import { io, Socket } from "socket.io-client";
-import type { BroadcasterStatus, PeerMapEntry, InboundSignal } from "@/lib/types";
-import { ICE_SERVERS } from "@/lib/types";
+import type { BroadcasterStatus, PeerMapEntry } from "@/lib/types";
+import { ICE_SERVERS, type SignalPayload } from "@/lib/types";
 import { eventBus } from "@/lib/eventBus";
 import { emitCandidate, emitDescription, applyRemoteSignal } from "@/lib/p2p/signalTransport";
+import { NostrSignaler } from "@/lib/p2p/nostrSignal";
 import { type AudioProfileMode, AUDIO_PROFILES, DEFAULT_AUDIO_PROFILE } from "@/lib/audio/profiles";
 import { createLimitedStream, type LimiterSession } from "@/lib/audio/broadcastLimiter";
 
-interface UseBroadcasterOptions {
-  streamKey: string;
-}
 
-export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
+export function useBroadcaster() {
   const [status, setStatus] = useState<BroadcasterStatus>("IDLE");
   const [listeners, setListeners] = useState<number>(0);
   const [globalPeerMap, setGlobalPeerMap] = useState<PeerMapEntry[]>([]);
-  const [socketId, setSocketId] = useState<string | null>(null);
+  const [npub, setNpub] = useState<string | null>(null);
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [activeProfile, setActiveProfile] = useState<AudioProfileMode>(DEFAULT_AUDIO_PROFILE.id);
   const [activeStream, setActiveStream] = useState<MediaStream | null>(null);
   const [previewStream, setPreviewStream] = useState<MediaStream | null>(null);
-  const socketRef = useRef<Socket | null>(null);
+  const signalerRef = useRef<NostrSignaler | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const currentDeviceIdRef = useRef<string | undefined>(undefined);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
@@ -53,14 +50,16 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
       reportIntervalRef.current = null;
     }
 
-    if (socketRef.current) {
-      if (socketRef.current.id) {
-        eventBus.emit("broadcast_ended", { broadcasterId: socketRef.current.id });
+    if (signalerRef.current) {
+      if (signalerRef.current.publicKey) {
+        eventBus.emit("broadcast_ended", { broadcasterId: signalerRef.current.publicKey });
       }
-      socketRef.current.disconnect();
-      socketRef.current = null;
+      signalerRef.current.close();
+      signalerRef.current = null;
     }
     setStatus("IDLE");
+    setNpub(null);
+    setGlobalPeerMap([]);
   };
 
   useEffect(() => {
@@ -87,7 +86,7 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
   const createPeerConnection = (
     targetId: string,
     stream: MediaStream,
-    socket: Socket,
+    signaler: NostrSignaler,
   ): RTCPeerConnection => {
     // Note: STUN/TURN servers are required for production WebRTC
     const pc = new RTCPeerConnection({
@@ -96,7 +95,7 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
 
     pc.onicecandidate = (event) => {
       if (event.candidate) {
-        emitCandidate(socket, targetId, event.candidate);
+        emitCandidate(signaler, targetId, event.candidate);
       }
     };
 
@@ -104,17 +103,19 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
     stream.getTracks().forEach((track) => pc.addTrack(track, stream));
 
     peerConnectionsRef.current.set(targetId, pc);
-    setListeners((prev) => prev + 1);
 
     pc.onconnectionstatechange = () => {
       logger.info("P2P-Broadcaster", `[PC] Connection state for ${targetId}:`, pc.connectionState);
       if (
         pc.connectionState === "disconnected" ||
-        pc.connectionState === "failed"
+        pc.connectionState === "failed" ||
+        pc.connectionState === "closed"
       ) {
         pc.close();
         peerConnectionsRef.current.delete(targetId);
-        setListeners((prev) => Math.max(0, prev - 1));
+        setListeners(peerConnectionsRef.current.size);
+      } else if (pc.connectionState === "connected") {
+        setListeners(peerConnectionsRef.current.size);
       }
     };
 
@@ -147,74 +148,85 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
         setPreviewStream(null);
       }
 
-      const socket = io(); // Connects to the same origin (Coordination server)
-      socketRef.current = socket;
+      const signaler = new NostrSignaler();
+      signalerRef.current = signaler;
+      setNpub(signaler.publicKey);
 
-      socket.on("connect", () => {
-        setSocketId(socket.id || null);
-        socket.emit(
-          "register_broadcaster",
-          { key: streamKey },
-          (res: { success: boolean; isRoot: boolean }) => {
-            if (res.success) {
-              setStatus("LIVE");
+      // Subscribe to WebRTC signals
+      signaler.subscribeToSignals(async (senderPubKey: string, signal: SignalPayload) => {
+        let pc = peerConnectionsRef.current.get(senderPubKey);
 
-              if (socket.id) {
-                eventBus.emit("broadcast_started", { broadcasterId: socket.id });
-              }
-
-              // Broadcast initial location instantly so observers can see the Root Node
-              socket.emit("report_state", {
-                latentState: {
-                  x: window.innerWidth / 2,
-                  y: window.innerHeight / 2,
-                  spin: 0.5,
-                },
-                activeConnections: peerConnectionsRef.current.size,
-              });
-
-              // Root broadcaster sits at the center of the latent space and reports periodically
-              reportIntervalRef.current = setInterval(() => {
-                if (socket.connected) {
-                  socket.emit("report_state", {
-                    latentState: {
-                      x: window.innerWidth / 2,
-                      y: window.innerHeight / 2,
-                      spin: 0.5,
-                    },
-                    activeConnections: peerConnectionsRef.current.size,
-                  });
-                }
-              }, 5000);
-            } else {
-              setStatus("ERROR");
-            }
-          },
-        );
-      });
-
-      socket.on("peer_map_update", (peers: PeerMapEntry[]) => {
-        setGlobalPeerMap(peers);
-        setListeners(Math.max(0, peers.length - 1)); // Exclude root
-      });
-
-      socket.on(
-        "signal",
-        async (data: InboundSignal) => {
-          const { sender, signal } = data;
-          let pc = peerConnectionsRef.current.get(sender);
-
-          if (signal.type === "offer" || signal.type === "answer") {
-            if (!pc) pc = createPeerConnection(sender, stream, socket);
-            await applyRemoteSignal(pc, signal);
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            emitDescription(socket, sender, answer);
-          } else if (signal.type === "candidate" && pc) {
-            await applyRemoteSignal(pc, signal);
+        if (signal.type === "offer") {
+          // New offer from this peer — close any stale connection first
+          // (the peer may have refreshed, creating fresh ICE credentials).
+          if (pc) {
+            pc.close();
+            peerConnectionsRef.current.delete(senderPubKey);
           }
-        },
+          pc = createPeerConnection(senderPubKey, stream, signaler);
+          await applyRemoteSignal(pc, signal);
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          emitDescription(signaler, senderPubKey, answer);
+        } else if (signal.type === "answer" && pc) {
+          await applyRemoteSignal(pc, signal);
+        } else if (signal.type === "candidate" && pc) {
+          await applyRemoteSignal(pc, signal);
+        }
+      });
+
+      // Subscribe to the global topology
+      signaler.subscribeToTopology((peers: PeerMapEntry[]) => {
+        // We include ourselves in the render output for the Broadcaster
+        setGlobalPeerMap([
+          {
+            id: signaler.publicKey,
+            role: "root",
+            latentState: { x: window.innerWidth / 2, y: window.innerHeight / 2, spin: 0.5 },
+            connections: peerConnectionsRef.current.size,
+            energy: 100,
+          },
+          ...peers
+        ]);
+      });
+
+      setStatus("LIVE");
+      eventBus.emit("broadcast_started", { broadcasterId: signaler.publicKey });
+
+      // Cache our presence as a Root node and start the 30s beacon
+      signaler.updatePresenceData(
+        "root",
+        { x: window.innerWidth / 2, y: window.innerHeight / 2, spin: 0.5 },
+        peerConnectionsRef.current.size,
+        100
       );
+      signaler.startPresenceBeacon();
+
+      // The interval syncs our local map state periodically if no topology updates arrive
+      reportIntervalRef.current = setInterval(() => {
+        setGlobalPeerMap(prev => {
+          const others = prev.filter(p => p.id !== signaler.publicKey);
+          return [
+            {
+              id: signaler.publicKey,
+              role: "root",
+              latentState: { x: window.innerWidth / 2, y: window.innerHeight / 2, spin: 0.5 },
+              connections: peerConnectionsRef.current.size,
+              energy: 100,
+            },
+            ...others
+          ];
+        });
+
+        // Keep the cached presence data fresh for the beacon
+        signaler.updatePresenceData(
+          "root",
+          { x: window.innerWidth / 2, y: window.innerHeight / 2, spin: 0.5 },
+          peerConnectionsRef.current.size,
+          100
+        );
+      }, 5000);
+
     } catch (e) {
       console.error(e);
       setStatus("ERROR");
@@ -293,26 +305,22 @@ export function useBroadcaster({ streamKey }: UseBroadcasterOptions) {
       // Stop old raw tracks
       streamRef.current.getTracks().forEach((t) => t.stop());
 
-      // Update refs and state (raw stream for waveform, limited goes to WebRTC)
+      // Update refs and state
       streamRef.current = newRawStream;
       setActiveStream(newRawStream);
 
-      // Allow components (like Canvas) to react to this profile change visually
       eventBus.emit("audio_profile_changed", { profile: profileId });
 
     } catch (e) {
       console.error(`Failed to swap audio profile to ${profileId}`, e);
-      // Revert state if failed
       setActiveProfile(activeProfile);
     }
   };
 
-
-
   return {
     status,
     listeners,
-    socketId,
+    socketId: npub, // Expose npub disguised as socketId for UI backward compatibility temporarily
     globalPeerMap,
     devices,
     activeProfile,

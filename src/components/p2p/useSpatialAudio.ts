@@ -6,7 +6,6 @@ import {
   MAX_AUDIO_DISTANCE,
   AMBIENT_LOWPASS_CAP,
   MIN_LOWPASS_FREQ,
-  ACTIVE_LOWPASS_CAP,
 } from "@/lib/physicsConstants";
 
 export function useSpatialAudio(
@@ -62,39 +61,39 @@ export function useSpatialAudio(
     const updateAudioSpatial = () => {
       if (!spatialDataRef.current || !nodesRef.current) return;
 
-      const { distanceToNode, pan, isActive, latent } = spatialDataRef.current;
+      const { distanceToNode, pan, isActive } = spatialDataRef.current;
       const { panner: p, filter: f, masterGain: g } = nodesRef.current;
 
       p.pan.setTargetAtTime(isActive ? 0 : pan, ctx.currentTime, 0.1);
 
-      if (!isActive && (distanceToNode === Infinity || latent.x === 0)) {
-        g.gain.setTargetAtTime(0.0, ctx.currentTime, 0.1);
-        return;
-      }
-
       let volume = 0;
       if (isActive) {
+        // Explicitly tuned in — full volume, bypass distance entirely
         volume = 1.0;
+      } else if (distanceToNode < 50) {
+        // Close ambient — capped at 0.4 so it's clearly quieter than active (1.0)
+        volume = 0.4;
+      } else if (distanceToNode < MAX_AUDIO_DISTANCE) {
+        const normalizedDist = (distanceToNode - 50) / (MAX_AUDIO_DISTANCE - 50);
+        volume = 0.4 * Math.pow(1.0 - normalizedDist, 2);
       } else {
-        if (distanceToNode < 50) {
-          volume = 1.0;
-        } else if (distanceToNode < MAX_AUDIO_DISTANCE) {
-          const normalizedDist = (distanceToNode - 50) / (MAX_AUDIO_DISTANCE - 50);
-          volume = Math.pow(1.0 - normalizedDist, 2);
-        } else {
-          volume = 0.05;
-        }
+        // Far away or Infinity — baseline ambient hum
+        volume = 0.05;
       }
 
       g.gain.setTargetAtTime(Math.max(0.01, volume), ctx.currentTime, 0.2);
 
-      const maxFreq = isActive ? ACTIVE_LOWPASS_CAP : AMBIENT_LOWPASS_CAP;
-      const targetFreq =
-        volume === 1.0
-          ? maxFreq
-          : MIN_LOWPASS_FREQ + (maxFreq - MIN_LOWPASS_FREQ) * Math.pow(volume, 1.5);
-
-      f.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
+      // When active: bypass the lowpass entirely (Nyquist = transparent).
+      // When ambient: distance-dependent lowpass for the spatial "through the wall" effect.
+      if (isActive) {
+        f.frequency.setTargetAtTime(ctx.sampleRate / 2, ctx.currentTime, 0.05);
+      } else {
+        const targetFreq =
+          volume >= 0.4
+            ? AMBIENT_LOWPASS_CAP
+            : MIN_LOWPASS_FREQ + (AMBIENT_LOWPASS_CAP - MIN_LOWPASS_FREQ) * Math.pow(volume / 0.4, 1.5);
+        f.frequency.setTargetAtTime(targetFreq, ctx.currentTime, 0.2);
+      }
     };
 
     const intervalId = setInterval(updateAudioSpatial, 50);

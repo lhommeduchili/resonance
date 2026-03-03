@@ -12,7 +12,7 @@ import type { SpatialData } from "@/components/simulation/usePhysicsEngine";
 import { eventBus } from "@/lib/eventBus";
 
 export default function Home() {
-  const { status, activePeers, socketId, globalPeerMap, dataTransferRate, audioStream, upstreamTargetId, startListening, stopListening, untuneFromBroadcast } = useListener();
+  const { status, activePeers, socketId, globalPeerMap, dataTransferRate, audioStream, upstreamTargetId, startListening, untuneFromBroadcast, unlockAudio } = useListener();
   const [isAudioReady, setIsAudioReady] = useState(false);
 
   // Shared state connecting Physics Engine to Audio Engine
@@ -97,6 +97,7 @@ export default function Home() {
             e.stopPropagation();
             initAudio();
             resumeAudio();
+            unlockAudio();
             setIsAudioReady(true);
           }}
         >
@@ -123,6 +124,7 @@ export default function Home() {
           State active peers: {activePeers}
         </div>
       </div>
+
 
       {/* The Simulation Field Container */}
       <div className="absolute inset-0 z-0 flex items-center justify-center">

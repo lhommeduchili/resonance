@@ -80,7 +80,7 @@ export function SimulationCanvas({
     }, [engine]);
 
     // Handle the Animation Frame Loop
-    useAnimationFrame((deltaTime) => {
+    useAnimationFrame(() => {
         const canvas = canvasRef.current;
         const ctx = ctxRef.current;
         if (!canvas || !ctx) return;

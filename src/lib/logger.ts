@@ -5,7 +5,7 @@
  * Suppresses verbose `info` traces in production to prevent terminal/browser console flooding.
  */
 
-type LogLevel = "info" | "warn" | "error" | "debug";
+// LogLevel is not currently used since the logger exposes explicit functions
 
 const formatMessage = (namespace: string, message: string) => `[${namespace}] ${message}`;
 

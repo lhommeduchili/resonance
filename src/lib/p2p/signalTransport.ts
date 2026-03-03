@@ -5,7 +5,7 @@
  * signals to an RTCPeerConnection. No React state — only WebRTC operations.
  */
 
-import type { Socket } from "socket.io-client";
+import type { NostrSignaler } from "./nostrSignal";
 import type { SignalPayload } from "../types";
 import { logger } from "../logger";
 
@@ -15,22 +15,19 @@ import { logger } from "../logger";
 
 /**
  * Serialize an RTCIceCandidate into a typed SignalPayload and emit it
- * over the socket to the given target peer.
+ * over the Nostr network to the given target peer.
  *
  * Normalizes the candidate via `.toJSON()` at the send boundary so the
  * receiving side always gets a plain `RTCIceCandidateInit` object.
  */
 export function emitCandidate(
-    socket: Socket,
-    target: string,
+    signaler: NostrSignaler,
+    targetPublicKey: string,
     candidate: RTCIceCandidate,
 ): void {
-    socket.emit("signal", {
-        target,
-        signal: {
-            type: "candidate" as const,
-            candidate: candidate.toJSON(),
-        },
+    signaler.sendSignal(targetPublicKey, {
+        type: "candidate" as const,
+        candidate: candidate.toJSON(),
     });
 }
 
@@ -38,16 +35,14 @@ export function emitCandidate(
  * Emit an SDP offer or answer as a properly typed SignalPayload.
  */
 export function emitDescription(
-    socket: Socket,
-    target: string,
+    signaler: NostrSignaler,
+    targetPublicKey: string,
     description: RTCSessionDescriptionInit,
 ): void {
-    socket.emit("signal", {
-        target,
-        signal: {
-            type: description.type as "offer" | "answer",
-            sdp: description.sdp ?? "",
-        },
+    // Offers/answers are critical — send immediately, don't queue.
+    signaler.sendSignalImmediate(targetPublicKey, {
+        type: description.type as "offer" | "answer",
+        sdp: description.sdp ?? "",
     });
 }
 
@@ -77,6 +72,14 @@ export async function applyRemoteSignal(
         case "candidate":
             await pc.addIceCandidate(signal.candidate);
             return "Applied ICE candidate";
+
+        case "batch":
+            let count = 0;
+            for (const s of signal.signals) {
+                await applyRemoteSignal(pc, s);
+                count++;
+            }
+            return `Applied batch of ${count} signals`;
 
         default: {
             const _exhaustive: never = signal;

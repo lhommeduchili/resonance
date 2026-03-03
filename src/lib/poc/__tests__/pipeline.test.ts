@@ -19,7 +19,6 @@ describe('Session Attribution Scoring Pipeline (DAL)', () => {
     });
 
     it('startBroadcast should insert a broadcast record and return the ID', async () => {
-        const mockDbInsert = vi.fn().mockReturnThis();
         const mockDbValues = vi.fn().mockReturnThis();
         const mockDbReturning = vi.fn().mockResolvedValue([{ id: 'broadcast-123' }]);
 
@@ -40,7 +39,6 @@ describe('Session Attribution Scoring Pipeline (DAL)', () => {
     });
 
     it('recordListenerJoin should insert a session record and return the ID', async () => {
-        const mockDbInsert = vi.fn().mockReturnThis();
         const mockDbValues = vi.fn().mockReturnThis();
         const mockDbReturning = vi.fn().mockResolvedValue([{ id: 'session-456' }]);
 

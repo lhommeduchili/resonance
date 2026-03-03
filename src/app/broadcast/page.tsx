@@ -20,7 +20,7 @@ export default function BroadcastTerminal() {
     stopBroadcast,
     changeDevice,
     changeAudioProfile,
-  } = useBroadcaster({ streamKey: "dev_key" });
+  } = useBroadcaster();
   const [selectedDevice, setSelectedDevice] = useState<string>("");
 
   // Broadcast terminal doesn't need audio spatial panning locally, but Canvas needs the ref
@@ -46,12 +46,12 @@ export default function BroadcastTerminal() {
 
       {/* The Translucent Broadcaster Terminal */}
       <div className="relative z-10 w-full max-w-lg border border-accent p-8 font-mono text-sm leading-relaxed bg-black/10 backdrop-blur-[6px] shadow-2xl">
-        <header className="mb-8 border-b border-accent pb-4">
+        <header className="mb-8 border-b border-accent pb-4 flex flex-col items-center text-center">
           <h1 className="text-xl font-bold tracking-widest text-[#ffffff]">
-            * RESONANCE INGESTION *
+            ✧ RESONANCE INGESTION ✧
           </h1>
           <p className="text-highlight mt-2 uppercase text-xs">
-            Root Node Configuration
+            BROADCAST NODE CONFIGURATION
           </p>
         </header>
 

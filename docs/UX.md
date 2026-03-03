@@ -798,6 +798,27 @@ scenes develop lineage
 cultural capital replaces financial capital
 
 11. Invisible Accessibility (Screen Readers & Keyboards)
+
+## A Strict Design Constraint
+Resonance is deeply visual and spatial, rendered almost entirely on a `<canvas>`.
+However, **we do not sacrifice accessibility for aesthetics**.
+
+A central project constraint is the use of **Invisible Semantic DOM Overlays**.
+
+Because screen readers (like VoiceOver or NVDA) cannot read Canvas pixels, we must project an invisible HTML structure *over* the canvas that mirrors the spatial reality.
+
+### The Implementation Pattern
+1. **The Canvas layer** visualizes the physics, nodes, and particles.
+2. **The DOM layer (sr-only)** sits transparently above it.
+3. Every active broadcast node gets an invisible `<button>` positioned at its relative `x/y` coordinates on screen.
+4. When focus moves via keyboard `Tab` or Screen-Reader swipe, the underlying Physics Engine is told to "snap" the user's particle to that node's coordinates.
+
+### Required Screen Reader Experience
+When a user navigates to a node blindly, the semantic DOM must announce context dynamically:
+> "Node: Tokyo Underground. 42 Listeners. Energy Rising. Press Space to resonate. Press Enter to tune in."
+
+### Form Interactions
+Critical actions like clicking "Ignite Transmission" or "Connect Wallet" **must never** be built as pure Canvas click-zones. They must always be real `<button>` elements styled either invisibly or utilizing our brutalist CSS design system, ensuring native keyboard focus and click-events function perfectly without a mouse.
 The "Felt Encounter" must be universal, even without sight or a mouse.
 
 Despite being a Canvas-first simulation, we MUST maintain a visually hidden, semantically rich HTML tree beneath it.

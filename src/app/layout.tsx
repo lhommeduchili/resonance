@@ -8,8 +8,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Constellation P2P Radio",
-  description: "A decentralized WebRTC audio mesh network.",
+  title: "resonance",
+  description: "A P2P generative radio network and cultural simulation field.",
 };
 
 export default function RootLayout({

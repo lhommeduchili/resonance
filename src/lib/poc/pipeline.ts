@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { curatorialGraphs, broadcasts, sessions } from '@/db/schema';
+import { broadcasts, sessions } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { calculateDiscoveryImpact, calculateRetentionScore } from './metrics';
 
@@ -13,7 +13,7 @@ export async function startBroadcast(graphId: string, broadcasterWallet: string)
             .returning({ id: broadcasts.id });
 
         return result[0].id;
-    } catch (e: unknown) {
+    } catch {
         // Suppressed in local dev to cleanly mock DB PoC records
         return `mock-broadcast-${Date.now()}`;
     }
@@ -24,7 +24,7 @@ export async function endBroadcast(broadcastId: string): Promise<void> {
         await db.update(broadcasts)
             .set({ endedAt: new Date() })
             .where(eq(broadcasts.id, broadcastId));
-    } catch (e: unknown) {
+    } catch {
         // Silently catch to avoid log spam, DB is typically off in dev unless needed
     }
 }
@@ -39,7 +39,7 @@ export async function recordListenerJoin(broadcastId: string, listenerId: string
             .returning({ id: sessions.id });
 
         return result[0].id;
-    } catch (e: unknown) {
+    } catch {
         return `mock-session-${Date.now()}`;
     }
 }
@@ -49,7 +49,7 @@ export async function recordListenerLeave(sessionId: string): Promise<void> {
         await db.update(sessions)
             .set({ leftAt: new Date() })
             .where(eq(sessions.id, sessionId));
-    } catch (e: unknown) {
+    } catch {
         // Silently catch
     }
 }
@@ -83,7 +83,7 @@ export async function getGraphMetrics(graphId: string): Promise<GraphMetrics> {
             retentionScore: retention,
             discoveryImpact: discovery
         };
-    } catch (e: unknown) {
+    } catch {
         return { retentionScore: 0, discoveryImpact: 0 };
     }
 }

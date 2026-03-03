@@ -118,7 +118,7 @@ export function usePhysicsEngine(
     }
 
     prevIsActiveRef.current = isActive;
-  }, [isActive, isListener, dataTransferRate, connectedNodeId, isReady]);
+  }, [isActive, isListener, dataTransferRate, connectedNodeId, isReady, activeProfile]);
 
   const handleMouseMove = (x: number, y: number) => {
     elementsRef.current.mouse.x = x;
