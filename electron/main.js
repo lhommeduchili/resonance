@@ -35,6 +35,36 @@ async function createWindow() {
 }
 
 app.whenReady().then(() => {
+    // Specifically handle microphone permissions for the web contents
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { session } = require('electron');
+
+    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
+        if (permission === 'media' || permission === 'mediaAudioTrack') {
+            return true;
+        }
+        return false;
+    });
+
+    session.defaultSession.setPermissionRequestHandler(async (webContents, permission, callback) => {
+        if (permission === 'media' || permission === 'mediaAudioTrack') {
+            if (process.platform === 'darwin') {
+                let status = systemPreferences.getMediaAccessStatus('microphone');
+                if (status === 'not-determined') {
+                    // First launch — trigger the native macOS permission dialog
+                    const granted = await systemPreferences.askForMediaAccess('microphone');
+                    callback(granted);
+                } else {
+                    callback(status === 'granted');
+                }
+            } else {
+                callback(true);
+            }
+        } else {
+            callback(false);
+        }
+    });
+
     createWindow();
 
     app.on('activate', () => {

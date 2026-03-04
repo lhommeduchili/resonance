@@ -1,7 +1,7 @@
-# Specifications: Resonance
+# Specifications: resonance
 
 ## Overview
-Resonance is a cryptoeconomic peer-to-peer audio streaming network and self-organized media ecology. 
+resonance is a cryptoeconomic peer-to-peer audio streaming network and self-organized media ecology. 
 It replaces central streaming servers with a live simulation field where webcasting stations 
 (oscillating nodes) and listeners (particles) interact to form cultural scenes based on laws of 
 alignment, attraction, and energy decay.
@@ -31,7 +31,7 @@ boundaries defined in `docs/ARCHITECTURE.md`.
 Every system action emits discrete events off-chain: `listener_joined`, `listener_left`, 
 `relay_selected`, `curation_support_changed`, `broadcast_started`, `broadcast_ended`.
 
-## The Resonance Field & Physics
+## The resonance Field & Physics
 - The UI is a visual representation of social and cultural physics.
 - **Agents:** Participants exist as particles (listeners) and oscillating nodes (broadcasts). 
 - **Mechanics:** 
@@ -47,7 +47,7 @@ temporary path across cultural space.
 ## Cryptoeconomics (The Thermodynamics)
 - **Flow Energy (Layer 1 - Currency):** Earned by relaying, listening, and broadcasting. It is the 
 network's fuel but continuously decays, incentivizing circulation over hoarding/speculation.
-- **Resonance Marks (Layer 2 - Memory):** Permanent, non-transferable identity-bound proofs of 
+- **resonance Marks (Layer 2 - Memory):** Permanent, non-transferable identity-bound proofs of 
 participation at key cultural events. Used for governance weight.
 - **Stewardship Weight (Layer 3 - Governance):** Influence is derived from long-term participation 
 and diversity of contribution, ensuring that "whales" cannot buy control.

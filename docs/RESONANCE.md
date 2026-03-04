@@ -8,7 +8,7 @@
 
 ## 1. Abstract
 
-Resonance is a decentralized, peer-to-peer audio streaming network designed to reintroduce 
+resonance is a decentralized, peer-to-peer audio streaming network designed to reintroduce 
 *collective cultural broadcasting* into the web3 era. 
 
 Unlike contemporary algorithmic streaming platforms, resonance treats webcasting as a complex system 
@@ -44,7 +44,7 @@ Traditional radio optimized for:
 -   cultural discovery
 -   human curation
 
-Resonance aims to merge both worlds by creating:
+resonance aims to merge both worlds by creating:
 
 > **A radio where participation generates ownership and cultural
 > memory.**
@@ -215,7 +215,7 @@ This transforms listening into co-creation.
 
 ## 7. Governance
 
-Resonance evolves through community governance:
+resonance evolves through community governance:
 
 Participants vote on: - protocol upgrades - funding pools - featured
 broadcasts - moderation policies
@@ -238,7 +238,7 @@ Radio becomes exploratory again.
 
 ## 9. Emergent Properties
 
-If successful, Resonance produces:
+If successful, resonance produces:
 
 -   self-sustaining underground scenes
 -   geographically fluid radio cultures
@@ -289,7 +289,7 @@ Mitigation requires strong design emphasizing culture over finance.
 
 ## 12. Vision
 
-Resonance is not a streaming platform.
+resonance is not a streaming platform.
 
 It is:
 

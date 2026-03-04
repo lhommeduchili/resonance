@@ -9,7 +9,7 @@ NOT require rewriting the runtime system.
 
 ## 0. PHILOSOPHY
 
-Resonance must evolve without refactoring its core simulation or audio engine.
+resonance must evolve without refactoring its core simulation or audio engine.
 
 Therefore:
 
@@ -28,7 +28,7 @@ All subsystems communicate through an event layer.
 ### Interface
 
 ```ts
-interface ResonanceEvent<T = any> {
+interface resonanceEvent<T = any> {
   type: string
   timestamp: number
   payload: T
@@ -207,7 +207,7 @@ Persistence layer abstraction.
 
 ```ts
 interface PersistenceAdapter {
-  saveEvent(event: ResonanceEvent): Promise<void>
+  saveEvent(event: resonanceEvent): Promise<void>
   loadSession(sessionId: string): Promise<SessionData>
   storeArchive(chunk: ArrayBuffer): Promise<string>
 }

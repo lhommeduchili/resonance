@@ -9,6 +9,7 @@ import type { SpatialData } from "@/components/simulation/usePhysicsEngine";
 export default function BroadcastTerminal() {
   const {
     status,
+    errorDetail,
     listeners,
     devices,
     socketId,
@@ -62,7 +63,7 @@ export default function BroadcastTerminal() {
             </span>
             <div className="flex border border-accent rounded overflow-hidden">
               <button
-                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors ${activeProfile === "VOICE"
+                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors cursor-pointer ${activeProfile === "VOICE"
                   ? "bg-foreground text-black font-bold"
                   : "bg-black/40 text-accent hover:bg-black/60"
                   }`}
@@ -71,7 +72,7 @@ export default function BroadcastTerminal() {
                 [ Voice ]
               </button>
               <button
-                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors ${activeProfile === "HIGH_FIDELITY"
+                className={`flex-1 py-2 text-xs uppercase tracking-widest transition-colors cursor-pointer ${activeProfile === "HIGH_FIDELITY"
                   ? "bg-foreground text-black font-bold"
                   : "bg-black/40 text-accent hover:bg-black/60"
                   }`}
@@ -162,9 +163,10 @@ export default function BroadcastTerminal() {
           )}
 
           {status === "ERROR" && (
-            <p className="text-red-500 text-xs mt-2 text-center uppercase">
-              Microphone access denied or server offline.
-            </p>
+            <div className="text-red-500 text-xs mt-2 text-center flex flex-col items-center">
+              <span className="uppercase font-bold mb-1">Microphone Access Denied / Server Error</span>
+              <span className="opacity-70 font-mono">&quot;{errorDetail || 'Unknown Error'}&quot;</span>
+            </div>
           )}
         </section>
       </div>

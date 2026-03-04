@@ -1,6 +1,7 @@
 {
   "name": "resonance",
   "version": "0.1.0",
+  "license": "GPL-3.0",
   "main": "electron/main.js",
   "scripts": {
     "dev": "next dev",
@@ -10,7 +11,27 @@
     "test": "vitest",
     "test:run": "vitest run",
     "electron:dev": "cross-env NODE_ENV=development concurrently \"pnpm run dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "pnpm run build && electron-builder"
+    "electron:build": "pnpm run build && electron-builder && codesign --force --deep --sign - dist/mac-arm64/resonance.app"
+  },
+  "build": {
+    "appId": "com.resonance.app",
+    "productName": "resonance",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "out/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "mac": {
+      "target": "dmg",
+      "identity": null,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Resonance requires microphone access to broadcast live audio streams.",
+        "NSCameraUsageDescription": "Resonance does not use the camera."
+      }
+    }
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",

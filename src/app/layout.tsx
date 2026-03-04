@@ -20,6 +20,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistMono.variable} antialiased bg-background text-foreground selection:bg-highlight selection:text-background`}>
+        {/* Electron Title Bar Drag Region Overlay */}
+        <div style={{ WebkitAppRegion: 'drag' } as any} className="fixed top-0 left-0 right-0 h-[38px] z-50 cursor-default" />
+
         {children}
       </body>
     </html>

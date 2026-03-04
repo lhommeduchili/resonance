@@ -1,9 +1,9 @@
-Resonance is a self-organized radio ecology.
+resonance is a self-organized radio ecology.
 
-Traditional platforms set up servers that distribute content that users consume. Resonance sets up a 
+Traditional platforms set up servers that distribute content that users consume. resonance sets up a 
 field in which agents interact, patterns emerge from those interactions and culture appears.
 
-The Resonance Field
+The resonance Field
 
 We define a continuous state space R(x, t), where x is the abstract position in cultural space, t is 
 time and R is a measure of resonance intensity (activity + attention).
@@ -45,7 +45,7 @@ chaotic orbital slingshotting in the UI).
 $$\frac{dp_i}{dt} = v_i(t) \propto F_{total, i}$$
 
 ### 1. Alignment (Spin-Wave Behavioural Inertia)
-Instead of standard Boids flocking (which transports matter/agents), the Resonance field propagates *information* via **Spin-Wave Theory**, referencing Attanasi et al. (2014) on starling flocks. A 
+Instead of standard Boids flocking (which transports matter/agents), the resonance field propagates *information* via **Spin-Wave Theory**, referencing Attanasi et al. (2014) on starling flocks. A 
 change in taste or direction by one agent ripples rapidly through the network without requiring the 
 agents themselves to swap positions immediately.
 

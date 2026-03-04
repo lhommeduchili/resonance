@@ -4,9 +4,9 @@ Not onboarding.
 Not features.
 The felt encounter.
 
-If Resonance works, people should understand it before thinking about it.
+If resonance works, people should understand it before thinking about it.
 
-The First 10 Seconds of Resonance
+The First 10 Seconds of resonance
 A Temporal Experience Script
 
 Think of this like directing the opening shot of a film.
@@ -75,7 +75,7 @@ Sound spatializes.
 
 The user discovers interaction accidentally.
 
-5s — First Resonance
+5s — First resonance
 
 Cursor approaches a node.
 
@@ -135,7 +135,7 @@ Most apps ask:
 
 “What do you want to do?”
 
-Resonance tells you:
+resonance tells you:
 
 “You have arrived somewhere.”
 
@@ -145,13 +145,13 @@ Hidden Design Principle
 
 We delay abstraction.
 
-Traditional UX	Resonance UX
+Traditional UX	resonance UX
 explain → interact	interact → understand
 user controls system	user discovers system
 interface first	phenomenon first
 
 The Core Interaction Loop
-The First 5 Minutes Inside Resonance
+The First 5 Minutes Inside resonance
 
 Think of this as the equivalent of:
 
@@ -209,7 +209,7 @@ returning strengthens the trail
 
 repeated visits create a visible path
 
-Without saying it, Resonance builds:
+Without saying it, resonance builds:
 
 personal listening geography.
 
@@ -381,7 +381,7 @@ something in the network changes because of me.
 
 1. Preconditions (Invisible Preparation)
 
-Before someone goes live, Resonance quietly measures:
+Before someone goes live, resonance quietly measures:
 
 how long they’ve listened
 
@@ -496,7 +496,7 @@ You feel growth instead of watching numbers.
 
 This reduces performative anxiety.
 
-7. Resonance Thresholds (Brilliant Emergent Mechanic)
+7. resonance Thresholds (Brilliant Emergent Mechanic)
 
 As participation rises, thresholds unlock automatically:
 
@@ -504,7 +504,7 @@ Stage 1 — Stable Signal
 
 Audio quality increases.
 
-Stage 2 — Collective Resonance
+Stage 2 — Collective resonance
 
 Visual aura expands.
 Discovery radius increases.
@@ -565,7 +565,7 @@ Spotify psychology:
 
 upload for algorithm
 
-Resonance psychology:
+resonance psychology:
 
 summon a gathering
 
@@ -613,7 +613,7 @@ Value follows presence, not popularity.
 
 2. Separate Three Things (Critical)
 
-Most systems merge these. Resonance must not.
+Most systems merge these. resonance must not.
 
 Function	Purpose
 Currency	short-term energy flow
@@ -668,7 +668,7 @@ temporary amplification
 
 They are fuel, not wealth.
 
-4. Layer 2 — Resonance Marks (Memory)
+4. Layer 2 — resonance Marks (Memory)
 
 This is the real value layer.
 
@@ -773,7 +773,7 @@ price appreciation
 
 liquidity
 
-Resonance offers:
+resonance offers:
 
 decay
 
@@ -800,7 +800,7 @@ cultural capital replaces financial capital
 11. Invisible Accessibility (Screen Readers & Keyboards)
 
 ## A Strict Design Constraint
-Resonance is deeply visual and spatial, rendered almost entirely on a `<canvas>`.
+resonance is deeply visual and spatial, rendered almost entirely on a `<canvas>`.
 However, **we do not sacrifice accessibility for aesthetics**.
 
 A central project constraint is the use of **Invisible Semantic DOM Overlays**.
@@ -836,14 +836,14 @@ The Deep Insight
 Spotify optimizes attention.
 Crypto optimizes assets.
 
-Resonance optimizes continuity.
+resonance optimizes continuity.
 
-Resonance Operational Energy Model
+resonance Operational Energy Model
 (Who pays, when, and why)
 
 First, a key principle:
 
-⚠️ Blockchain is NOT the runtime of Resonance.
+⚠️ Blockchain is NOT the runtime of resonance.
 
 Blockchain only records rare, meaningful state transitions.
 
@@ -1081,7 +1081,7 @@ Typical Web3:
 
 users pay gas → friction kills adoption
 
-Resonance:
+resonance:
 
 participation generates energy → energy sustains infrastructure
 

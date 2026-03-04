@@ -13,6 +13,7 @@ import { createLimitedStream, type LimiterSession } from "@/lib/audio/broadcastL
 
 export function useBroadcaster() {
   const [status, setStatus] = useState<BroadcasterStatus>("IDLE");
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
   const [listeners, setListeners] = useState<number>(0);
   const [globalPeerMap, setGlobalPeerMap] = useState<PeerMapEntry[]>([]);
   const [npub, setNpub] = useState<string | null>(null);
@@ -58,6 +59,7 @@ export function useBroadcaster() {
       signalerRef.current = null;
     }
     setStatus("IDLE");
+    setErrorDetail(null);
     setNpub(null);
     setGlobalPeerMap([]);
   };
@@ -124,6 +126,7 @@ export function useBroadcaster() {
 
   const startBroadcast = async (deviceId?: string) => {
     setStatus("CONNECTING");
+    setErrorDetail(null);
     currentDeviceIdRef.current = deviceId;
     try {
       const constraints: MediaStreamConstraints = {
@@ -227,9 +230,14 @@ export function useBroadcaster() {
         );
       }, 5000);
 
-    } catch (e) {
+    } catch (e: unknown) {
       console.error(e);
       setStatus("ERROR");
+      if (e instanceof Error) {
+        setErrorDetail(e.message || e.name);
+      } else {
+        setErrorDetail(String(e));
+      }
     }
   };
 
@@ -319,6 +327,7 @@ export function useBroadcaster() {
 
   return {
     status,
+    errorDetail,
     listeners,
     socketId: npub, // Expose npub disguised as socketId for UI backward compatibility temporarily
     globalPeerMap,

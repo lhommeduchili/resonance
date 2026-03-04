@@ -1,8 +1,8 @@
-# Testing Instructions for Resonance (P2P Radio)
+# Testing Instructions for resonance (P2P Radio)
 
-These instructions detail how to test the core WebRTC peer-to-peer audio transmission currently implemented in the Resonance project.
+These instructions detail how to test the core WebRTC peer-to-peer audio transmission currently implemented in the resonance project.
 
-Because Resonance is a decentralized P2P application, you need to simulate at least two different clients: the **Broadcaster** (sending audio) and the **Listener** (receiving audio). The clients coordinate via decentralized Nostr relays, avoiding any centralized signaling server.
+Because resonance is a decentralized P2P application, you need to simulate at least two different clients: the **Broadcaster** (sending audio) and the **Listener** (receiving audio). The clients coordinate via decentralized Nostr relays, avoiding any centralized signaling server.
 
 ## Prerequisites
 1. Ensure you have Node.js and `pnpm` (or `npm`) installed.
@@ -11,7 +11,7 @@ Because Resonance is a decentralized P2P application, you need to simulate at le
 ---
 
 ## Step 1: Start the Local Environment
-Resonance runs as a standard Next.js application.
+resonance runs as a standard Next.js application.
 
 1. Open a terminal and navigate to the project root directory.
 2. Run the development server:
@@ -39,7 +39,7 @@ This is the node that ingests audio from your microphone and makes it available 
 ---
 
 ## Step 3: Connect a Listener (Consumer/Peer)
-This simulates a user tuning into the Resonance radio field. They will pull signaling metadata from the Nostr relays and establish a direct WebRTC connection with the Broadcaster.
+This simulates a user tuning into the resonance radio field. They will pull signaling metadata from the Nostr relays and establish a direct WebRTC connection with the Broadcaster.
 
 1. Open a **New Browser Tab** (or a completely different browser window/Profile to ensure isolated audio contexts).
 2. Navigate to the main simulation page:
@@ -64,3 +64,48 @@ To test how the system manages multiple peers in a decentralized context:
 - **Cannot hear audio:** Ensure the Listener tab is not muted in your OS volume mixer. Check the browser console on the Listener tab (`F12` -> Console) for WebRTC ICE candidate failures or MediaStream errors.
 - **Microphone error:** If the Broadcaster UI says "Microphone access denied" or fails to capture audio, check your browser's site settings (`lock icon` in the URL bar), reset the microphone permission, and reload the page.
 - **Nostr Relay Issues:** The initial WebRTC signaling depends on external Nostr relays (e.g., `wss://relay.damus.io`). If these public relays are down or severely rate-limiting, the peers will fail to discover each other. Check the browser console (`F12`) for `NostrSignaler` errors.
+
+---
+
+## Deploying the Broadcaster (Desktop App)
+To run the Broadcaster as a standalone, one-click desktop application (Electron), follow these steps to generate a `.dmg` file.
+
+1. Install dependencies if you haven't already:
+   ```bash
+   pnpm install
+   ```
+2. Run the electron build script:
+   ```bash
+   pnpm run electron:build
+   ```
+3. Wait for the build process to finish. It will first generate a static Next.js export in the `out/` directory, and then `electron-builder` will package the app.
+4. Locate the generated executable in the `dist/mac-arm64/` directory (or the corresponding OS folder).
+5. Drag and drop `resonance.app` to your Applications folder and launch it to start broadcasting!
+
+---
+
+## Deploying the Listeners (Vercel)
+The Listener visualization field and peer nodes are intended to be deployed on the web. Vercel is the recommended platform for Next.js applications.
+
+1. Ensure your code is pushed to a GitHub repository.
+2. Log in to [Vercel](https://vercel.com/) and click **Add New** -> **Project**.
+3. Import your GitHub repository.
+4. Vercel will automatically detect that this is a Next.js project. Ensure the Build Command is set to `next build` and the Output Directory is left as default (or `.next`).
+5. Set any necessary Environment Variables (if your Nostr signaling requires them).
+6. Click **Deploy**. Within a few minutes, the resonance web client will be live on a public URL.
+
+### Manual Vercel Deployment via CLI
+If you already have a Vercel project named `resonance` deployed and wish to push updates manually from the command line:
+
+1. Install the Vercel CLI globally (if you haven't yet):
+   ```bash
+   pnpm add -g vercel
+   ```
+2. Link your local directory to your existing Vercel project:
+   ```bash
+   vercel link
+   ```
+3. Deploy the application to your existing setup:
+   ```bash
+   vercel --prod
+   ```

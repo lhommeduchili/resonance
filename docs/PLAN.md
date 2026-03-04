@@ -1,4 +1,4 @@
-# Resonance — Road to MVP (Plan)
+# resonance — Road to MVP (Plan)
 
 ## 0. Core Design Principles
 1. **Off-Chain First:** All real-time systems (audio, physics, discovery, UX) remain off-chain. 

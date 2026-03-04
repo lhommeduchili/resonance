@@ -42,4 +42,5 @@ next-env.d.ts
 
 
 # build output
-dist
+/dist
+.env*.local
