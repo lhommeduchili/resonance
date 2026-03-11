@@ -1,6 +1,6 @@
 import { SimplePool, generateSecretKey, getPublicKey, finalizeEvent, nip04, type Event } from 'nostr-tools';
 import { logger } from '../logger';
-import type { SignalPayload, PeerMapEntry, LatentState } from '../types';
+import type { SignalPayload, PeerMapEntry, LatentState, CuratorialGraph } from '../types';
 
 // ---------------------------------------------------------------------------
 // Relay configuration
@@ -215,15 +215,27 @@ export class NostrSignaler {
     }
 
     // Cached presence state — updated freely without publishing
-    private cachedPresence: { role: 'root' | 'relay' | 'observer'; latentState: LatentState; connections: number; energy: number } | null = null;
+    private cachedPresence: {
+        role: 'root' | 'relay' | 'observer';
+        latentState: LatentState;
+        connections: number;
+        energy: number;
+        activeCuratorialGraph?: CuratorialGraph;
+    } | null = null;
 
     /**
      * Update the cached presence data without publishing.
      * The beacon interval will automatically publish the latest state.
      * This is safe to call as frequently as needed (every frame, every state change, etc).
      */
-    public updatePresenceData(role: 'root' | 'relay' | 'observer', latentState: LatentState, connections: number = 0, energy: number = 100): void {
-        this.cachedPresence = { role, latentState, connections, energy };
+    public updatePresenceData(
+        role: 'root' | 'relay' | 'observer',
+        latentState: LatentState,
+        connections: number = 0,
+        energy: number = 100,
+        activeCuratorialGraph?: CuratorialGraph,
+    ): void {
+        this.cachedPresence = { role, latentState, connections, energy, activeCuratorialGraph };
     }
 
     /**
@@ -295,6 +307,7 @@ export class NostrSignaler {
                                 latentState: data.latentState,
                                 connections: data.connections || 0,
                                 energy: data.energy || 100,
+                                activeCuratorialGraph: data.activeCuratorialGraph,
                                 lastSeen: event.created_at
                             });
 

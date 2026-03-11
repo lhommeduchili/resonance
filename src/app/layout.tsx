@@ -18,10 +18,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-region="global">
       <body className={`${geistMono.variable} antialiased bg-background text-foreground selection:bg-highlight selection:text-background`}>
         {/* Electron Title Bar Drag Region Overlay */}
-        <div style={{ WebkitAppRegion: 'drag' } as any} className="fixed top-0 left-0 right-0 h-[38px] z-50 cursor-default" />
+        <div style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} className="fixed top-0 left-0 right-0 h-[38px] z-50 cursor-default" />
 
         {children}
       </body>

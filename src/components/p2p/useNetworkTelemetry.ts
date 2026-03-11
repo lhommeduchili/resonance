@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ListenerStatus } from "@/lib/types";
+import { logger } from "@/lib/logger";
 
 export function useNetworkTelemetry(
-    upstreamPcRef: React.MutableRefObject<RTCPeerConnection | null>,
+    getUpstreamPc: () => RTCPeerConnection | null,
     status: ListenerStatus
 ) {
     // 1.0 = Perfect. > 1.0 = High Jitter/Loss.
@@ -23,14 +24,16 @@ export function useNetworkTelemetry(
         if (status === "LISTENING") {
             // Setup polling for the WebRTC Stats
             interval = setInterval(async () => {
-                const pc = upstreamPcRef.current;
+                const pc = getUpstreamPc();
                 if (!pc) return;
 
                 try {
                     const stats = await pc.getStats();
                     // Scrape for the primary inbound RTP stream (audio route)
                     const inboundReport = Array.from(stats.values()).find(
-                        (report) => report.type === "inbound-rtp" && report.kind === "audio"
+                        (report) =>
+                            report.type === "inbound-rtp" &&
+                            (report as RTCInboundRtpStreamStats).kind === "audio"
                     );
                     const inboundStats = inboundReport ? inboundReport as { timestamp: number, packetsReceived?: number, packetsLost?: number, jitter?: number } : null;
 
@@ -79,7 +82,7 @@ export function useNetworkTelemetry(
                         };
                     }
                 } catch (e) {
-                    console.warn("[Telemetry] Failed to gather WebRTC stats: ", e);
+                    logger.warn("P2P-Telemetry", "Failed to gather WebRTC stats", e);
                 }
             }, 250); // Analyze 4 times a second
         } else {
@@ -93,7 +96,7 @@ export function useNetworkTelemetry(
         }
 
         return () => clearInterval(interval);
-    }, [status, upstreamPcRef]);
+    }, [status, getUpstreamPc]);
 
     return { dataTransferRate };
 }

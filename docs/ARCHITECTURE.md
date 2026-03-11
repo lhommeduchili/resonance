@@ -1,6 +1,8 @@
 # RESONANCE — ARCHITECTURE CONTRACTS
 ## System Interface & Boundary Specification
 
+Planning note: March 2026 remediation decisions have now been merged into this canonical document. The standalone files (`docs/AUDIT_2026-03.md`, `docs/REFACTOR_PLAN.md`, `docs/RUNTIME_CONTRACTS.md`, `docs/A11Y_LOCALIZATION.md`, `docs/ENGINEERING_STANDARDS.md`, and `docs/ISSUE_ROADMAP.md`) remain as historical audit records.
+
 Audience: Core Engineers / Senior Coding Agent
 Purpose: Freeze architectural boundaries so future evolution (blockchain, scaling, governance) does 
 NOT require rewriting the runtime system.
@@ -31,6 +33,7 @@ All subsystems communicate through an event layer.
 interface resonanceEvent<T = any> {
   type: string
   timestamp: number
+  source: "listener" | "broadcaster" | "simulation" | "transport" | "ui" | "system"
   payload: T
 }
 ```
@@ -41,6 +44,9 @@ interface resonanceEvent<T = any> {
 - Systems subscribe to event types.
 - Events are append-only.
 - Events must be replayable for debugging.
+- Runtime events should include envelope metadata (`type`, `timestamp`, `source`, `payload`) and keep bounded history for diagnostics.
+- Client runtime MAY forward selected event envelopes to a server-side attribution processor, but MUST NOT import persistence adapters directly.
+- Runtime subsystem exchange should use typed channels/contracts; global `window` custom-event bridges are disallowed for core simulation/transport synchronization.
 
 ### Core Events
 
@@ -101,6 +107,9 @@ WebRTC signaling uses **Nostr ephemeral events** via public relays (no central s
 errors to the UI Contract.
 - The broadcaster MUST reset stale PeerConnections when receiving a new offer from an existing peer
   (handles listener page refresh / reconnect).
+- Each live broadcaster session MUST bind to exactly one curatorial channel identity; channel metadata
+  is propagated in presence payloads and may only change by ending the current session and starting a
+  new one.
 
 ---
 
@@ -284,6 +293,13 @@ instances and 60FPS Physics calculation objects.
 - **CRITICAL PERF:** React state MUST NEVER track coordinates inside or be triggered by the `requestAnimationFrame` Canvas loop to prevent catastrophic render bloat.
 - **Observability Constraint:** The use of raw `console.log` is strictly prohibited in production 
 code. All telemetry and debugging must be routed through the dedicated `logger.ts` wrapper.
+
+### Accessibility And Localization Runtime Contract
+- Semantic overlays MUST mirror active broadcast Nodes with focusable controls that map to field actions.
+- Overlay controls SHOULD be projected from simulation/world coordinates into viewport space.
+- `aria-live` narration MUST be localized and event-driven (join/leave, broadcast lifecycle, tune/proximity states).
+- `region` is deployment/regulatory context. `locale` is language/formatting context.
+- English is the source schema. `es-CL` is a first-class public locale.
 
 ---
 

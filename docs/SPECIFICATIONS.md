@@ -1,5 +1,11 @@
 # Specifications: resonance
 
+## Planning Note
+
+Implementation-specific audit and remediation details were first authored in standalone March 2026 planning documents under `docs/`. Their approved runtime outcomes are now reflected in this specification and `docs/ARCHITECTURE.md`, while the standalone docs remain as historical records.
+
+Operational handoff state for the post-refactor phase is tracked in `docs/HANDOFF_2026-03_REFACTOR.md`.
+
 ## Overview
 resonance is a cryptoeconomic peer-to-peer audio streaming network and self-organized media ecology. 
 It replaces central streaming servers with a live simulation field where webcasting stations 
@@ -83,3 +89,30 @@ excessive loader bloat. Use dynamic imports (`next/dynamic`) for heavy off-scree
 - **Accessibility:** Despite being a WebGL/Canvas product, all critical interactions ("Ignite 
 Transmission", "Connect Wallet") MUST be backed by invisible semantic DOM overlays for screen 
 readers and keyboard navigation.
+
+## March 2026 Implementation Notes
+
+- A region-locale routing foundation is now in place using visible paths: `/{region}/{locale}` and `/{region}/{locale}/broadcast`.
+- Initial rollout matrix:
+  - `global/en`
+  - `global/es-CL`
+  - `cl/es-CL`
+  - `cl/en`
+- English remains the source language for dictionary schema.
+- Chilean Spanish (`es-CL`) is the first public localized interface path.
+- Branded protocol vocabulary remains glossary-controlled: `Flow Energy`, `resonance Marks`, and `Treasury`.
+- Active P2P runtime hooks (`useListener`, `useBroadcaster`) now consume transport services under `src/lib/p2p/transport/` rather than directly instantiating WebRTC/signaling primitives.
+- Simulation stepping now runs through a dedicated engine module (`src/lib/simulation/engine.ts`) with explicit `deltaTime` and seeded randomness support; `usePhysicsEngine` acts as an adapter and renderer bridge.
+- Runtime fault isolation now includes subsystem boundaries around transport and simulation surfaces in active screens, in addition to the route-level `error.tsx` boundary.
+- Semantic accessibility runtime contracts are now represented in code via typed node snapshots (`src/lib/a11y/contracts.ts`) and a dedicated overlay/announcer layer (`src/components/a11y/*`).
+- Deterministic simulation safeguards now include invalid-delta no-op behavior and frame-rate invariance regression tests (`src/lib/simulation/__tests__/engine.test.ts`).
+- Logger-only observability is now enforced by lint policy (`no-console`) with `src/lib/logger.ts` as the approved console boundary.
+- A11y overlays now include coordinate-aware semantic node controls projected from simulation space into viewport space.
+- Localized live narration now includes proximity, connection negotiation, tuned state, and transmission lifecycle messaging for `en` and `es-CL`.
+- Broadcaster initiation now uses a staged ignition sequence (priming/stabilizing) before live state, preserving semantic action controls.
+- CI now enforces architecture guard tests for event envelope behavior, deterministic simulation paths, and a11y projection contracts.
+- Runtime latent-state exchange between simulation and listener transport now uses a typed in-process runtime channel rather than global `window` custom events.
+- Transport lifecycle guard tests now cover listener and broadcaster service baseline behaviors in `src/lib/p2p/transport/__tests__/`.
+- Live broadcaster sessions now require a curatorial channel binding prior to ignition, and channel metadata is propagated through peer topology for listener discovery/a11y surfaces.
+- Runtime attribution handoff now exists as a client bridge plus server-oriented event processor (`src/lib/poc/client.ts`, `src/lib/poc/serverEvents.ts`) designed to keep Layer A decoupled from direct DB access.
+- A deployment-ready ingestion worker is available at `scripts/poc-event-server.ts` (`pnpm poc:events`), receiving `/events` payloads from `NEXT_PUBLIC_POC_EVENT_ENDPOINT` and forwarding them into PoC handlers.

@@ -10,6 +10,8 @@
     "lint": "eslint",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:e2e": "playwright test",
+    "poc:events": "tsx scripts/poc-event-server.ts",
     "electron:dev": "cross-env NODE_ENV=development concurrently \"pnpm run dev\" \"wait-on http://localhost:3000 && electron .\"",
     "electron:build": "pnpm run build && electron-builder && codesign --force --deep --sign - dist/mac-arm64/resonance.app"
   },
@@ -44,6 +46,7 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",

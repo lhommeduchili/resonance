@@ -1,0 +1,200 @@
+{
+  "config": {
+    "configFile": "/Users/lhommeduchili/hacking/resonance/playwright.config.ts",
+    "rootDir": "/Users/lhommeduchili/hacking/resonance/tests/e2e",
+    "forbidOnly": false,
+    "fullyParallel": true,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 2
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/lhommeduchili/hacking/resonance/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 2
+        },
+        "id": "chromium",
+        "name": "chromium",
+        "testDir": "/Users/lhommeduchili/hacking/resonance/tests/e2e",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "json"
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "runAgents": "none",
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.58.2",
+    "workers": 5,
+    "webServer": {
+      "command": "pnpm run dev",
+      "port": 3000,
+      "reuseExistingServer": true
+    }
+  },
+  "suites": [
+    {
+      "title": "webrtc.spec.ts",
+      "file": "webrtc.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "Resonance P2P Network",
+          "file": "webrtc.spec.ts",
+          "line": 3,
+          "column": 6,
+          "specs": [
+            {
+              "title": "Broadcaster can ignite transmission and go LIVE",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "failed",
+                      "duration": 5623,
+                      "error": {
+                        "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=[ IDLE ]').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=[ IDLE ]').first()\u001b[22m\n",
+                        "stack": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=[ IDLE ]').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=[ IDLE ]').first()\u001b[22m\n\n    at /Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts:10:61",
+                        "location": {
+                          "file": "/Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts",
+                          "column": 61,
+                          "line": 10
+                        },
+                        "snippet": "   8 |\n   9 |         // Check initial state\n> 10 |         await expect(page.locator('text=[ IDLE ]').first()).toBeVisible();\n     |                                                             ^\n  11 |\n  12 |         // Click to start transmitting\n  13 |         const igniteButton = page.locator('button', { hasText: 'IGNITE TRANSMISSION' });"
+                      },
+                      "errors": [
+                        {
+                          "location": {
+                            "file": "/Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts",
+                            "column": 61,
+                            "line": 10
+                          },
+                          "message": "Error: \u001b[2mexpect(\u001b[22m\u001b[31mlocator\u001b[39m\u001b[2m).\u001b[22mtoBeVisible\u001b[2m(\u001b[22m\u001b[2m)\u001b[22m failed\n\nLocator: locator('text=[ IDLE ]').first()\nExpected: visible\nTimeout: 5000ms\nError: element(s) not found\n\nCall log:\n\u001b[2m  - Expect \"toBeVisible\" with timeout 5000ms\u001b[22m\n\u001b[2m  - waiting for locator('text=[ IDLE ]').first()\u001b[22m\n\n\n   8 |\n   9 |         // Check initial state\n> 10 |         await expect(page.locator('text=[ IDLE ]').first()).toBeVisible();\n     |                                                             ^\n  11 |\n  12 |         // Click to start transmitting\n  13 |         const igniteButton = page.locator('button', { hasText: 'IGNITE TRANSMISSION' });\n    at /Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts:10:61"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-10T21:43:16.037Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "error-context",
+                          "contentType": "text/markdown",
+                          "path": "/Users/lhommeduchili/hacking/resonance/test-results/webrtc-Resonance-P2P-Netwo-02b7e-te-transmission-and-go-LIVE-chromium/error-context.md"
+                        }
+                      ],
+                      "errorLocation": {
+                        "file": "/Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts",
+                        "column": 61,
+                        "line": 10
+                      }
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "ed991657a088d3805ab9-fa6d5291baeab6e4bbbe",
+              "file": "webrtc.spec.ts",
+              "line": 5,
+              "column": 9
+            },
+            {
+              "title": "Listener can tune in and connect to the mesh",
+              "ok": false,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium",
+                  "projectName": "chromium",
+                  "results": [
+                    {
+                      "workerIndex": 1,
+                      "parallelIndex": 1,
+                      "status": "timedOut",
+                      "duration": 30040,
+                      "error": {
+                        "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m",
+                        "stack": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                      },
+                      "errors": [
+                        {
+                          "message": "\u001b[31mTest timeout of 30000ms exceeded.\u001b[39m"
+                        },
+                        {
+                          "location": {
+                            "file": "/Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts",
+                            "column": 85,
+                            "line": 25
+                          },
+                          "message": "Error: locator.click: Test timeout of 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('button').filter({ hasText: 'IGNITE TRANSMISSION' })\u001b[22m\n\n\n  23 |         const broadcasterPage = await context.newPage();\n  24 |         await broadcasterPage.goto('/broadcast');\n> 25 |         await broadcasterPage.locator('button', { hasText: 'IGNITE TRANSMISSION' }).click();\n     |                                                                                     ^\n  26 |         await expect(broadcasterPage.locator('text=[ LIVE ]').first()).toBeVisible({ timeout: 10000 });\n  27 |\n  28 |         // Context 2: Listener (Current page)\n    at /Users/lhommeduchili/hacking/resonance/tests/e2e/webrtc.spec.ts:25:85"
+                        }
+                      ],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-03-10T21:43:16.036Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "unexpected"
+                }
+              ],
+              "id": "ed991657a088d3805ab9-d5a3c73b40cdcdb13c97",
+              "file": "webrtc.spec.ts",
+              "line": 21,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-03-10T21:43:15.330Z",
+    "duration": 31496.676000000003,
+    "expected": 0,
+    "skipped": 0,
+    "unexpected": 2,
+    "flaky": 0
+  }
+}

@@ -1,0 +1,79 @@
+name: Resonance CI
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  validate:
+    name: Lint & Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          run_install: false
+          
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v4
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint Code Base
+        run: pnpm run lint
+
+      - name: Strict Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Architecture Guard Tests
+        run: pnpm exec vitest run src/lib/simulation/__tests__/engine.test.ts src/lib/a11y/__tests__/snapshots.test.ts src/lib/a11y/__tests__/positioning.test.ts src/lib/__tests__/eventBus.test.ts src/lib/runtime/__tests__/channel.test.ts src/lib/p2p/transport/__tests__/listenerTransport.test.ts src/lib/p2p/transport/__tests__/broadcasterTransport.test.ts src/lib/poc/__tests__/serverEvents.test.ts src/lib/poc/__tests__/guards.test.ts
+
+  e2e:
+    name: WebRTC E2E Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 8
+          
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright Browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: pnpm run test:e2e
+        
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14

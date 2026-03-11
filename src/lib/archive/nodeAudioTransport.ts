@@ -46,7 +46,7 @@ export class NodeAudioTransport implements AudioTransport {
                         pc.addRemoteCandidate((signal.candidate as Record<string, unknown>).candidate as string, (signal.candidate as Record<string, unknown>).sdpMid as string || '');
                     }
                 } catch (e) {
-                    console.error("[ArchiveNode] Error handling remote signal:", e);
+                    logger.error("ArchiveNode", "Error handling remote signal", e);
                 }
             }
         };

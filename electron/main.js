@@ -5,6 +5,11 @@ const path = require('path');
 
 const isDev = process.env.NODE_ENV === 'development';
 
+const logWarn = (message, error) => {
+    const suffix = error instanceof Error ? `: ${error.message}` : '';
+    process.stderr.write(`[Electron] ${message}${suffix}\n`);
+};
+
 async function createWindow() {
     const win = new BrowserWindow({
         width: 1200,
@@ -21,7 +26,7 @@ async function createWindow() {
         try {
             await systemPreferences.askForMediaAccess('microphone');
         } catch (e) {
-            console.warn('Failed to ask for media access', e);
+            logWarn('Failed to ask for media access', e);
         }
     }
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SpatialData } from "../simulation/usePhysicsEngine";
+import type { SpatialData } from "@/lib/simulation/contracts";
 import {
   MAX_AUDIO_DISTANCE,
   AMBIENT_LOWPASS_CAP,
   MIN_LOWPASS_FREQ,
 } from "@/lib/physicsConstants";
+import { logger } from "@/lib/logger";
 
 export function useSpatialAudio(
   stream: MediaStream | null,
@@ -22,6 +23,7 @@ export function useSpatialAudio(
 
   const [isInitialized, setIsInitialized] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Keep streamRef in sync so initAudio can access it
   useEffect(() => {
@@ -97,6 +99,7 @@ export function useSpatialAudio(
     };
 
     const intervalId = setInterval(updateAudioSpatial, 50);
+    intervalRef.current = intervalId;
 
     // If a stream already arrived before initAudio was called, connect it now
     if (streamRef.current && nodesRef.current) {
@@ -105,14 +108,19 @@ export function useSpatialAudio(
     }
 
     setIsInitialized(true);
-    return () => clearInterval(intervalId);
   };
 
   // Clean up AudioContext strictly on unmount
   useEffect(() => {
     return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
       if (audioContextRef.current) {
-        audioContextRef.current.close().catch(console.warn);
+        audioContextRef.current
+          .close()
+          .catch((error) => logger.warn("P2P-SpatialAudio", "Failed to close audio context", error));
         audioContextRef.current = null;
       }
       nodesRef.current = null;

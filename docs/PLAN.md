@@ -1,15 +1,5 @@
 # resonance — Road to MVP (Plan)
 
-## 0. Core Design Principles
-1. **Off-Chain First:** All real-time systems (audio, physics, discovery, UX) remain off-chain. 
-Blockchain is ONLY used for identity anchoring, periodic settlement, and governance snapshots.
-2. **Event-Driven Architecture:** Everything emits events (`listener_joined`, `listener_left`, 
-`relay_selected`, `curation_support_changed`, `broadcast_started`, `broadcast_ended`).
-3. **State Layers:**
-   - **Layer A** — Real-time ephemeral (WebRTC + simulation)
-   - **Layer B** — Persistent off-chain index (DB)
-   - **Layer C** — Cryptographic anchor (blockchain)
-
 ## 1. System Architecture (MVP Target)
 - **Frontend:** Next.js App Router, Canvas Simulation Field, WebAudio spatial engine, WebRTC 
 transport.
@@ -53,8 +43,8 @@ readability.
   Hidden `<audio>` element permanently muted as stream keep-alive.
 - [x] Instant tune/untune lifecycle: status toggle without WebRTC renegotiation.
 - [x] Broadcaster stale PeerConnection reset on re-offer from existing peer.
-- [ ] Infrastructure: Implement E2E Testing (Playwright) for the P2P connection loops.
-- [ ] Infrastructure: Setup GitHub Actions CI/CD pipeline for automated type checking and static 
+- [x] Infrastructure: Implement E2E Testing (Playwright) for the P2P connection loops.
+- [x] Infrastructure: Setup GitHub Actions CI/CD pipeline for automated type checking and static 
 analysis.
 
 ### PHASE 2 — Curatorial Graph Engine

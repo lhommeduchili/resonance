@@ -26,7 +26,11 @@ describe('ResonanceEventBus', () => {
         eventBus.on('broadcast_started', mockCallback1);
         eventBus.on('broadcast_started', mockCallback2);
 
-        const payload: EventPayloads['broadcast_started'] = { broadcasterId: 'root-1' };
+        const payload: EventPayloads['broadcast_started'] = {
+            broadcasterId: 'root-1',
+            graphId: 'graph-1',
+            graphName: 'Andes Nocturne',
+        };
         eventBus.emit('broadcast_started', payload);
 
         expect(mockCallback1).toHaveBeenCalledTimes(1);
@@ -58,5 +62,30 @@ describe('ResonanceEventBus', () => {
 
         expect(mockCallbackJoined).toHaveBeenCalledTimes(1);
         expect(mockCallbackLeft).not.toHaveBeenCalled();
+    });
+
+    it('should emit envelope metadata and keep bounded history', () => {
+        const envelopeHandler = vi.fn();
+        eventBus.onEnvelope('broadcast_started', envelopeHandler);
+
+        eventBus.emit(
+            'broadcast_started',
+            { broadcasterId: 'root-9', graphId: 'graph-9', graphName: 'Pacific Drift' },
+            { source: 'broadcaster' }
+        );
+
+        expect(envelopeHandler).toHaveBeenCalledTimes(1);
+        const envelope = envelopeHandler.mock.calls[0][0];
+        expect(envelope.type).toBe('broadcast_started');
+        expect(envelope.source).toBe('broadcaster');
+        expect(typeof envelope.timestamp).toBe('number');
+
+        const history = eventBus.getHistoryForEvent('broadcast_started');
+        expect(history.length).toBe(1);
+        expect(history[0]?.payload).toEqual({
+            broadcasterId: 'root-9',
+            graphId: 'graph-9',
+            graphName: 'Pacific Drift',
+        });
     });
 });

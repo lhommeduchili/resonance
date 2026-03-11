@@ -8,7 +8,7 @@ import {
     ANCHOR_SPRING,
     FREE_SPRING,
 } from "@/lib/physicsConstants";
-import type { Agent } from "@/components/simulation/usePhysicsEngine";
+import type { Agent } from "@/lib/simulation/contracts";
 
 export function computeInteractionForce(
     agent: Agent,
@@ -77,8 +77,13 @@ export function applyForcesAndKinematics(
     currentIsListener: boolean,
     dataTransferRate: number,
     width: number,
-    height: number
+    height: number,
+    deltaSeconds: number,
+    random: () => number
 ) {
+    const referenceStepScale = deltaSeconds * 60;
+    const clampedReferenceScale = Math.max(0, Math.min(3, referenceStepScale));
+
     for (let i = 0; i < agents.length; i++) {
         const agent = agents[i];
         if (agent.type === "node") continue;
@@ -107,39 +112,42 @@ export function applyForcesAndKinematics(
 
         // Noise
         if (agent.type === "listener") {
-            F_x += (Math.random() - 0.5) * 0.05;
-            F_y += (Math.random() - 0.5) * 0.05;
+            const noiseScale = Math.sqrt(clampedReferenceScale);
+            F_x += (random() - 0.5) * 0.05 * noiseScale;
+            F_y += (random() - 0.5) * 0.05 * noiseScale;
         }
 
         // Spin-Wave Kinematics
         if (totalNeighborCount > 0) {
             const avgLaplacian = totalSpinLaplacian / totalNeighborCount;
-            agent.spinVelocity += avgLaplacian * SPIN_WAVE_SPEED;
+            agent.spinVelocity += avgLaplacian * SPIN_WAVE_SPEED * clampedReferenceScale;
         }
-        agent.spinVelocity *= SPIN_INERTIA;
-        agent.spin += agent.spinVelocity;
+        agent.spinVelocity *= Math.pow(SPIN_INERTIA, clampedReferenceScale);
+        agent.spin += agent.spinVelocity * clampedReferenceScale;
 
         if (agent.spin > 1) agent.spin -= 1;
         if (agent.spin < 0) agent.spin += 1;
 
         // Apply Net Force
         if (!isSelf || (!mouse.isInteracting && currentIsListener)) {
-            agent.vx += F_x / agent.mass;
-            agent.vy += F_y / agent.mass;
+            agent.vx += (F_x / agent.mass) * clampedReferenceScale;
+            agent.vy += (F_y / agent.mass) * clampedReferenceScale;
         } else if (isSelf && mouse.isInteracting) {
-            agent.vx += F_x + (Math.random() - 0.5) * (dataTransferRate * 0.5);
-            agent.vy += F_y + (Math.random() - 0.5) * (dataTransferRate * 0.5);
+            const interactionNoiseScale = Math.sqrt(clampedReferenceScale);
+            agent.vx += (F_x + (random() - 0.5) * (dataTransferRate * 0.5) * interactionNoiseScale) * clampedReferenceScale;
+            agent.vy += (F_y + (random() - 0.5) * (dataTransferRate * 0.5) * interactionNoiseScale) * clampedReferenceScale;
         }
 
-        agent.vx *= SPATIAL_FRICTION;
-        agent.vy *= SPATIAL_FRICTION;
+        const friction = Math.pow(SPATIAL_FRICTION, clampedReferenceScale);
+        agent.vx *= friction;
+        agent.vy *= friction;
 
-        agent.x += agent.vx;
-        agent.y += agent.vy;
+        agent.x += agent.vx * clampedReferenceScale;
+        agent.y += agent.vy * clampedReferenceScale;
 
         // Age ambient particles
         if (agent.life !== undefined) {
-            agent.life += 0.01;
+            agent.life += 0.01 * clampedReferenceScale;
             if (
                 agent.life > 10 ||
                 agent.x < 0 ||

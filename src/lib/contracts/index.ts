@@ -9,9 +9,18 @@
  */
 
 // --- 1. GLOBAL EVENT BUS CONTRACT ---
+export type EventSource =
+    | "listener"
+    | "broadcaster"
+    | "simulation"
+    | "transport"
+    | "ui"
+    | "system";
+
 export interface ResonanceEvent<T = unknown> {
     type: string;
     timestamp: number;
+    source: EventSource;
     payload: T;
 }
 

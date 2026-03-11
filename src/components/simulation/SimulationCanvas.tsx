@@ -4,7 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePhysicsEngine } from "./usePhysicsEngine";
 import { useAnimationFrame } from "@/hooks/useAnimationFrame";
 import type { PeerMapEntry } from "@/lib/types";
-import type { SpatialData } from "./usePhysicsEngine";
+import type { SpatialData } from "@/lib/simulation/contracts";
 
 /**
  * The core visualizer for Resonance.
@@ -33,6 +33,7 @@ export function SimulationCanvas({
 }) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+    const hoveredNodeIdRef = useRef<string | null>(null);
     const engine = usePhysicsEngine(isActive, isListener, dataTransferRate, spatialDataRef, connectedNodeId, isReady, activeProfile);
 
     useEffect(() => {
@@ -53,6 +54,7 @@ export function SimulationCanvas({
             const ratio = window.devicePixelRatio || 1;
             canvas.width = width * ratio;
             canvas.height = height * ratio;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.scale(ratio, ratio);
         };
 
@@ -66,21 +68,21 @@ export function SimulationCanvas({
         };
 
         const handleClick = () => {
-            engine.handleClick();
+            engine.handleClick(hoveredNodeIdRef.current);
         };
 
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("click", handleClick);
+        canvas.addEventListener("mousemove", handleMouseMove);
+        canvas.addEventListener("click", handleClick);
 
         return () => {
             window.removeEventListener("resize", resize);
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("click", handleClick);
+            canvas.removeEventListener("mousemove", handleMouseMove);
+            canvas.removeEventListener("click", handleClick);
         };
     }, [engine]);
 
     // Handle the Animation Frame Loop
-    useAnimationFrame(() => {
+    useAnimationFrame((deltaMs) => {
         const canvas = canvasRef.current;
         const ctx = ctxRef.current;
         if (!canvas || !ctx) return;
@@ -89,7 +91,8 @@ export function SimulationCanvas({
         const height = window.innerHeight;
 
         engine.updatePeers(globalPeerMap, socketId);
-        engine.tick(ctx, width, height);
+        engine.tick(ctx, width, height, deltaMs);
+        hoveredNodeIdRef.current = spatialDataRef.current?.hoveredNodeId ?? null;
     });
 
     return (
