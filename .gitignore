@@ -17,8 +17,7 @@
 /.next/
 /out/
 
-# production
-/build
+# electron-builder buildResources live in /build and should be tracked.
 
 # misc
 .DS_Store

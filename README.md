@@ -28,6 +28,37 @@ archivers.
 experiences and emergent simulated complexity over standard menus.
 
 
+## downloads
+
+resonance broadcaster is available as a desktop app for macOS, Windows, and Linux.
+
+**Download the latest release:** https://github.com/lhommeduchili/resonance/releases/latest
+
+### macOS installation
+
+the app is ad-hoc signed (not notarized with Apple). macOS Gatekeeper will show a warning on first launch:
+
+1. download the `.dmg` for your architecture (Apple Silicon = `arm64`, Intel = `x64`)
+2. drag `resonance.app` to your Applications folder
+3. **right-click** (or Control-click) the app, then select **open**
+4. click **open** in the dialog that appears
+5. the app will launch normally from now on
+
+> if macOS says the app is "damaged," run this in Terminal:
+> ```bash
+> xattr -cr /Applications/resonance.app
+> ```
+
+### Windows installation
+
+download the `.exe` installer and run it. Windows SmartScreen may show a warning; click "more info", then "run anyway."
+
+### Linux installation
+
+download the `.AppImage`, make it executable (`chmod +x resonance-*.AppImage`), and run it.
+
+
+
 ## tech stack
 
 - **frontend app:** Next.js 14+ (App Router), Canvas API for Simulation Field, WebAudio spatial engine
@@ -47,7 +78,7 @@ experiences and emergent simulated complexity over standard menus.
 
 1. clone the repository:
 ```bash
-git clone https://github.com/your-org/resonance.git
+git clone https://github.com/lhommeduchili/resonance.git
 cd resonance
 ```
 
@@ -62,6 +93,65 @@ pnpm run dev
 ```
 
 visit `http://localhost:3000` to enter the simulation field.
+
+### broadcaster desktop app (local build)
+
+to build the Electron broadcaster app locally:
+
+```bash
+# macOS (Apple Silicon)
+pnpm run electron:build
+
+# macOS (x64 + arm64)
+pnpm run electron:build:mac
+
+# Windows
+pnpm run electron:build:win
+
+# Linux
+pnpm run electron:build:linux
+```
+
+built artifacts appear in the `dist/` directory.
+
+### creating a release
+
+releases are automated via GitHub Actions. the release workflow must be committed and pushed before
+you push the tag, because GitHub runs the workflow from the exact commit the tag points to.
+
+#### first release / retrying a failed tag
+
+```bash
+# 1. commit and push the release pipeline changes
+git add package.json electron-builder.yml build/entitlements.mac.plist .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
+git commit -m "Add desktop release pipeline"
+git push origin main
+
+# 2. if v0.1.0 was already pushed before the workflow existed, delete that bad tag
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
+
+# 3. recreate the tag on the commit that contains the workflow
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+#### future releases
+
+```bash
+# 1. bump package.json to the next version and commit it
+pnpm version patch --no-git-tag-version
+git add package.json
+git commit -m "Bump version"
+git push origin main
+
+# 2. tag the committed version and push the tag
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+after the tag is pushed, open **GitHub -> Actions -> release** and wait for the workflow to finish.
+it creates a draft GitHub Release with the `.dmg`, `.zip`, `.exe`, and `.AppImage` artifacts attached.
 
 ## documentation
 

@@ -13,27 +13,10 @@
     "test:e2e": "playwright test",
     "poc:events": "tsx scripts/poc-event-server.ts",
     "electron:dev": "cross-env NODE_ENV=development concurrently \"pnpm run dev\" \"wait-on http://localhost:3000 && electron .\"",
-    "electron:build": "pnpm run build && electron-builder && codesign --force --deep --sign - dist/mac-arm64/resonance.app"
-  },
-  "build": {
-    "appId": "com.resonance.app",
-    "productName": "resonance",
-    "directories": {
-      "output": "dist"
-    },
-    "files": [
-      "out/**/*",
-      "electron/**/*",
-      "package.json"
-    ],
-    "mac": {
-      "target": "dmg",
-      "identity": null,
-      "extendInfo": {
-        "NSMicrophoneUsageDescription": "Resonance requires microphone access to broadcast live audio streams.",
-        "NSCameraUsageDescription": "Resonance does not use the camera."
-      }
-    }
+    "electron:build": "pnpm run build && electron-builder --mac --arm64",
+    "electron:build:mac": "pnpm run build && electron-builder --mac",
+    "electron:build:win": "pnpm run build && electron-builder --win",
+    "electron:build:linux": "pnpm run build && electron-builder --linux"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.1",

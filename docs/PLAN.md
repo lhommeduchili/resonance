@@ -46,6 +46,8 @@ readability.
 - [x] Infrastructure: Implement E2E Testing (Playwright) for the P2P connection loops.
 - [x] Infrastructure: Setup GitHub Actions CI/CD pipeline for automated type checking and static 
 analysis.
+- [x] Infrastructure: Multi-platform release pipeline (macOS ad-hoc signed, Windows, Linux) via
+  GitHub Actions + GitHub Releases. Tag-triggered (`v*`).
 
 ### PHASE 2 — Curatorial Graph Engine
 **Goals:** persistent curator identity, channel abstraction, attribution tracking.

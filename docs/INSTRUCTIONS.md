@@ -68,19 +68,70 @@ To test how the system manages multiple peers in a decentralized context:
 ---
 
 ## Deploying the Broadcaster (Desktop App)
-To run the Broadcaster as a standalone, one-click desktop application (Electron), follow these steps to generate a `.dmg` file.
+To run the Broadcaster as a standalone desktop application (Electron), use the local build scripts or the GitHub Releases workflow.
 
 1. Install dependencies if you haven't already:
    ```bash
    pnpm install
    ```
-2. Run the electron build script:
+2. Run the Electron build script for your target platform:
    ```bash
+   # macOS Apple Silicon
    pnpm run electron:build
+
+   # macOS x64 + arm64
+   pnpm run electron:build:mac
+
+   # Windows
+   pnpm run electron:build:win
+
+   # Linux
+   pnpm run electron:build:linux
    ```
 3. Wait for the build process to finish. It will first generate a static Next.js export in the `out/` directory, and then `electron-builder` will package the app.
-4. Locate the generated executable in the `dist/mac-arm64/` directory (or the corresponding OS folder).
-5. Drag and drop `resonance.app` to your Applications folder and launch it to start broadcasting!
+4. Locate the generated artifact in the `dist/` directory.
+
+To publish a multi-platform release, make sure the release workflow has already been committed and pushed.
+GitHub runs workflows from the exact commit the tag points to, so pushing a tag before
+`.github/workflows/release.yml` exists on that commit will not create a release.
+
+### First release / retrying a failed tag
+
+If `v0.1.0` was already pushed before the release workflow was committed, delete and recreate it:
+
+```bash
+# 1. commit and push the release pipeline
+git add package.json electron-builder.yml build/entitlements.mac.plist .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
+git commit -m "Add desktop release pipeline"
+git push origin main
+
+# 2. delete the old tag that points to the pre-workflow commit
+git tag -d v0.1.0
+git push origin :refs/tags/v0.1.0
+
+# 3. recreate the tag on the commit that contains the workflow
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+### Future releases
+
+```bash
+# 1. bump package.json without creating a tag yet
+pnpm version patch --no-git-tag-version
+
+# 2. commit and push the version bump
+git add package.json
+git commit -m "Bump version"
+git push origin main
+
+# 3. tag the committed version and push the tag
+git tag v0.1.1
+git push origin v0.1.1
+```
+
+After the tag is pushed, open **GitHub -> Actions -> release** and wait for the workflow to finish.
+GitHub Actions builds macOS, Windows, and Linux artifacts, then creates a draft GitHub Release.
 
 ---
 

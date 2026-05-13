@@ -1,0 +1,149 @@
+# -----------------------------------------------------------------------------
+# resonance - release pipeline
+# -----------------------------------------------------------------------------
+# Triggered by pushing a version tag (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+# Builds platform-specific artifacts and creates a draft GitHub Release.
+#
+# Signing:
+#   - macOS: ad-hoc signed by default (identity: "-" in electron-builder.yml).
+#     For notarized releases later, switch to Developer ID signing and configure
+#     both certificate and Apple notary credentials.
+#   - Windows/Linux: no signing required.
+# -----------------------------------------------------------------------------
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  # -- macOS -----------------------------------------------------------------
+  build-mac:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build next.js static export
+        run: pnpm run build
+
+      - name: build macOS (${{ matrix.arch }})
+        run: pnpm exec electron-builder --mac --${{ matrix.arch }} --publish never
+
+      - name: upload macOS artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-${{ matrix.arch }}
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            !dist/*.blockmap
+          if-no-files-found: error
+          compression-level: 0
+
+  # -- Linux -----------------------------------------------------------------
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build next.js static export
+        run: pnpm run build
+
+      - name: build Linux
+        run: pnpm exec electron-builder --linux --publish never
+
+      - name: upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: dist/*.AppImage
+          if-no-files-found: error
+          compression-level: 0
+
+  # -- Windows ---------------------------------------------------------------
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: build next.js static export
+        run: pnpm run build
+
+      - name: build Windows
+        run: pnpm exec electron-builder --win --publish never
+
+      - name: upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: win-x64
+          path: dist/*.exe
+          if-no-files-found: error
+          compression-level: 0
+
+  # -- Release ---------------------------------------------------------------
+  release:
+    needs: [build-mac, build-linux, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: list release assets
+        run: find artifacts -type f | sort
+
+      - name: create GitHub Release (draft)
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          generate_release_notes: true
+          files: |
+            artifacts/*.dmg
+            artifacts/*.zip
+            artifacts/*.AppImage
+            artifacts/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

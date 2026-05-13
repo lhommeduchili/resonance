@@ -1,0 +1,50 @@
+# -----------------------------------------------------------------------------
+# resonance - electron-builder configuration
+# -----------------------------------------------------------------------------
+# Signing:
+#   macOS: ad-hoc signed (identity: "-"). Users bypass Gatekeeper via
+#   right-click -> Open.
+#   Full notarization requires Developer ID signing credentials and Apple notary
+#   credentials; leave notarization disabled for the no-Apple-account flow.
+# -----------------------------------------------------------------------------
+
+appId: com.resonance.app
+productName: resonance
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - out/**/*
+  - electron/**/*
+  - package.json
+
+# -- macOS --------------------------------------------------------------------
+mac:
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  hardenedRuntime: true
+  identity: "-"
+  notarize: false
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  extendInfo:
+    NSMicrophoneUsageDescription: "Resonance requires microphone access to broadcast live audio streams."
+    NSCameraUsageDescription: "Resonance does not use the camera."
+
+# -- Windows ------------------------------------------------------------------
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+
+# -- Linux --------------------------------------------------------------------
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Audio
