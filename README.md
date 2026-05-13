@@ -123,7 +123,7 @@ you push the tag, because GitHub runs the workflow from the exact commit the tag
 
 ```bash
 # 1. commit and push the release pipeline changes
-git add package.json electron-builder.yml build/entitlements.mac.plist .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
+git add package.json pnpm-workspace.yaml electron-builder.yml build/entitlements.mac.plist .github/workflows/ci.yml .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
 git commit -m "Add desktop release pipeline"
 git push origin main
 
@@ -151,7 +151,9 @@ git push origin v0.1.1
 ```
 
 after the tag is pushed, open **GitHub -> Actions -> release** and wait for the workflow to finish.
-it creates a draft GitHub Release with the `.dmg`, `.zip`, `.exe`, and `.AppImage` artifacts attached.
+if the workflow fails, no release is created; open the failed job and fix that first. when it
+succeeds, it creates a draft GitHub Release with the `.dmg`, `.zip`, `.exe`, and `.AppImage`
+artifacts attached.
 
 ## documentation
 

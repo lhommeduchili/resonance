@@ -101,7 +101,7 @@ If `v0.1.0` was already pushed before the release workflow was committed, delete
 
 ```bash
 # 1. commit and push the release pipeline
-git add package.json electron-builder.yml build/entitlements.mac.plist .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
+git add package.json pnpm-workspace.yaml electron-builder.yml build/entitlements.mac.plist .github/workflows/ci.yml .github/workflows/release.yml .gitignore README.md docs/INSTRUCTIONS.md docs/PLAN.md eslint.config.mjs
 git commit -m "Add desktop release pipeline"
 git push origin main
 
@@ -131,6 +131,7 @@ git push origin v0.1.1
 ```
 
 After the tag is pushed, open **GitHub -> Actions -> release** and wait for the workflow to finish.
+If the workflow fails, no release is created; open the failed job and fix that first.
 GitHub Actions builds macOS, Windows, and Linux artifacts, then creates a draft GitHub Release.
 
 ---
